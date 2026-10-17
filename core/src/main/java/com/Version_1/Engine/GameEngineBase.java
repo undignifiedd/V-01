@@ -1,36 +1,35 @@
-package com.Version_1;
+package com.Version_1.Engine;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.ScreenUtils;
 
+/**
+ * Reusable scaffolding: owns the SpriteBatch and runs update -> draw -> drawUI each frame.
+ * Subclasses MUST call super.create() first in their own create().
+ */
 public abstract class GameEngineBase extends ApplicationAdapter {
     protected SpriteBatch batch;
 
-    private Texture background;
-
     @Override
     public void create() {
-        background = new Texture("Background.jpg");
         batch = new SpriteBatch();
-        Gdx.app.log("Lifecycle", "Create() called");
     }
 
     @Override
     public void render() {
-
-        ScreenUtils.clear(0,0,0,1);
-
         float delta = Gdx.graphics.getDeltaTime();
         update(delta);
 
+        ScreenUtils.clear(0, 0, 0, 1);
+
         batch.begin();
-        batch.draw(background,0,0);
+        draw();
         batch.end();
 
-        draw();
+        // Scene2D Stage.draw() goes here: it must run OUTSIDE the batch block.
+        drawUI();
     }
 
     @Override
@@ -38,16 +37,14 @@ public abstract class GameEngineBase extends ApplicationAdapter {
         batch.dispose();
     }
 
-    protected abstract void draw();
-
+    /** Game logic. Set the batch projection from the camera at the end of this. */
     protected abstract void update(float delta);
 
-    public void resize(int width, int height) {
-        if (batch==null){
-            return;
-        }
-        batch.getProjectionMatrix().setToOrtho2D(0, 0, width, height);
+    /** Called between batch.begin()/end(). */
+    protected abstract void draw();
+
+    /** Called after batch.end(). Override for Stage.draw(). */
+    protected void drawUI() {
     }
 }
-
 
