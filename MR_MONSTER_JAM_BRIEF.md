@@ -18,6 +18,8 @@
 
 # \## 2. Tech constraints
 
+# \- - Fights are 1D side-view: movement is A/D along a fixed ground line, no vertical movement. Exploration is 2D top-down: WASD, with the same side-facing sprites (flipped for left/right; moving up/down just plays the walk animation). `Player.setTopDown(boolean)` switches modes; `FightPhase` uses the default (false) and sets the ground y, `ExplorePhase` calls `setTopDown(true)`. Enemy helpers (`directionToPlayer()`, `distanceToPlayer()`) are x-only because enemies only exist in 1D fights.
+
 # \- Java, libGDX, IntelliJ, project generated with gdx-liftoff (modules: `core`, `lwjgl3`, shared `assets/`).
 
 # \- Existing reusable code from the developer's earlier work: `GameEngineBase` (abstract, extends `ApplicationAdapter`, owns the `SpriteBatch`). Each frame it runs `update(delta)`, then `draw()` \*\*inside\*\* `batch.begin()/end()`, then `drawUI()` (empty hook, called \*\*after\*\* `batch.end()`, used for `Stage.draw()`). It draws no background and has no `resize()`. Subclasses must call `super.create()` first. Also a generic `AnimationStateMachine<T>` in `Version_1.Anim` (enum-keyed, wraps `Animation<TextureRegion>`). API: `setState(T)` (no-op if already in that state), `restart()` (replays the current animation from frame 0), `update(delta)`, `getCurrentFrame()`, `getStateTime()`, `isAnimationFinished()`, `getCurrentState()`. The constructor and `setState` throw if a state has no registered animation, so every enum value used must be in the map. Use `PlayMode.LOOP` for idle/walk and `PlayMode.NORMAL` for attacks, because `isAnimationFinished()` is only ever true for non-looping animations..
@@ -84,7 +86,7 @@
 
 # \### Folder layout
 
-# Java package root is `Version\_1`; each folder below is its own sub-package (e.g. `Version\_1.Entities`).
+# Java package root is `com.Version\_1`; each folder below is its own sub-package (e.g. `com.Version\_1.Entities`).
 
 # ```
 
@@ -290,11 +292,11 @@
 
 # \- \[✅] Repo created, skeleton committed (GameEngineBase, Main, Entity, Attackable, Interactable, Phase, World)
 
-# \-\- [x] `AnimationStateMachine` moved to `Version_1.Anim` (with validation and `restart()`)
+# \-\- [✅] `AnimationStateMachine` moved to `Version_1.Anim` (with validation and `restart()`)
 
 # \- \[ ] Shared game-state class (quest flags, rage meter, player stats)
 
-# \- \[ ] `Player` (move, attack, health)
+# \- [✅] `Player` (move, attack, health)
 
 # \- \[ ] `Enemy` base
 

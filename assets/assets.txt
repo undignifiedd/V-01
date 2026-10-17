@@ -1,5 +1,120 @@
+big_boss/Attack/Bringer-of-Death_Attack_1.png
+big_boss/Attack/Bringer-of-Death_Attack_10.png
+big_boss/Attack/Bringer-of-Death_Attack_2.png
+big_boss/Attack/Bringer-of-Death_Attack_3.png
+big_boss/Attack/Bringer-of-Death_Attack_4.png
+big_boss/Attack/Bringer-of-Death_Attack_5.png
+big_boss/Attack/Bringer-of-Death_Attack_6.png
+big_boss/Attack/Bringer-of-Death_Attack_7.png
+big_boss/Attack/Bringer-of-Death_Attack_8.png
+big_boss/Attack/Bringer-of-Death_Attack_9.png
+big_boss/Cast/Bringer-of-Death_Cast_1.png
+big_boss/Cast/Bringer-of-Death_Cast_2.png
+big_boss/Cast/Bringer-of-Death_Cast_3.png
+big_boss/Cast/Bringer-of-Death_Cast_4.png
+big_boss/Cast/Bringer-of-Death_Cast_5.png
+big_boss/Cast/Bringer-of-Death_Cast_6.png
+big_boss/Cast/Bringer-of-Death_Cast_7.png
+big_boss/Cast/Bringer-of-Death_Cast_8.png
+big_boss/Cast/Bringer-of-Death_Cast_9.png
+big_boss/Death/Bringer-of-Death_Death_1.png
+big_boss/Death/Bringer-of-Death_Death_10.png
+big_boss/Death/Bringer-of-Death_Death_2.png
+big_boss/Death/Bringer-of-Death_Death_3.png
+big_boss/Death/Bringer-of-Death_Death_4.png
+big_boss/Death/Bringer-of-Death_Death_5.png
+big_boss/Death/Bringer-of-Death_Death_6.png
+big_boss/Death/Bringer-of-Death_Death_7.png
+big_boss/Death/Bringer-of-Death_Death_8.png
+big_boss/Death/Bringer-of-Death_Death_9.png
+big_boss/Hurt/Bringer-of-Death_Hurt_1.png
+big_boss/Hurt/Bringer-of-Death_Hurt_2.png
+big_boss/Hurt/Bringer-of-Death_Hurt_3.png
+big_boss/Idle/Bringer-of-Death_Idle_1.png
+big_boss/Idle/Bringer-of-Death_Idle_2.png
+big_boss/Idle/Bringer-of-Death_Idle_3.png
+big_boss/Idle/Bringer-of-Death_Idle_4.png
+big_boss/Idle/Bringer-of-Death_Idle_5.png
+big_boss/Idle/Bringer-of-Death_Idle_6.png
+big_boss/Idle/Bringer-of-Death_Idle_7.png
+big_boss/Idle/Bringer-of-Death_Idle_8.png
+big_boss/No Effect Sprites/Attack/Bringer-of-Death_Attack_1.png
+big_boss/No Effect Sprites/Attack/Bringer-of-Death_Attack_10.png
+big_boss/No Effect Sprites/Attack/Bringer-of-Death_Attack_2.png
+big_boss/No Effect Sprites/Attack/Bringer-of-Death_Attack_3.png
+big_boss/No Effect Sprites/Attack/Bringer-of-Death_Attack_4.png
+big_boss/No Effect Sprites/Attack/Bringer-of-Death_Attack_5.png
+big_boss/No Effect Sprites/Attack/Bringer-of-Death_Attack_6.png
+big_boss/No Effect Sprites/Attack/Bringer-of-Death_Attack_7.png
+big_boss/No Effect Sprites/Attack/Bringer-of-Death_Attack_8.png
+big_boss/No Effect Sprites/Attack/Bringer-of-Death_Attack_9.png
+big_boss/No Effect Sprites/Cast/Bringer-of-Death_Cast_1.png
+big_boss/No Effect Sprites/Cast/Bringer-of-Death_Cast_2.png
+big_boss/No Effect Sprites/Cast/Bringer-of-Death_Cast_3.png
+big_boss/No Effect Sprites/Cast/Bringer-of-Death_Cast_4.png
+big_boss/No Effect Sprites/Cast/Bringer-of-Death_Cast_5.png
+big_boss/No Effect Sprites/Cast/Bringer-of-Death_Cast_6.png
+big_boss/No Effect Sprites/Cast/Bringer-of-Death_Cast_7.png
+big_boss/No Effect Sprites/Cast/Bringer-of-Death_Cast_8.png
+big_boss/No Effect Sprites/Cast/Bringer-of-Death_Cast_9.png
+big_boss/No Effect Sprites/Death/Bringer-of-Death_Death_1.png
+big_boss/No Effect Sprites/Death/Bringer-of-Death_Death_10.png
+big_boss/No Effect Sprites/Death/Bringer-of-Death_Death_2.png
+big_boss/No Effect Sprites/Death/Bringer-of-Death_Death_3.png
+big_boss/No Effect Sprites/Death/Bringer-of-Death_Death_4.png
+big_boss/No Effect Sprites/Death/Bringer-of-Death_Death_5.png
+big_boss/No Effect Sprites/Death/Bringer-of-Death_Death_6.png
+big_boss/No Effect Sprites/Death/Bringer-of-Death_Death_7.png
+big_boss/No Effect Sprites/Death/Bringer-of-Death_Death_8.png
+big_boss/No Effect Sprites/Death/Bringer-of-Death_Death_9.png
+big_boss/No Effect Sprites/Hurt/Bringer-of-Death_Hurt_1.png
+big_boss/No Effect Sprites/Hurt/Bringer-of-Death_Hurt_2.png
+big_boss/No Effect Sprites/Hurt/Bringer-of-Death_Hurt_3.png
+big_boss/No Effect Sprites/Spell/Bringer-of-Death_Spell_1.png
+big_boss/No Effect Sprites/Spell/Bringer-of-Death_Spell_10.png
+big_boss/No Effect Sprites/Spell/Bringer-of-Death_Spell_11.png
+big_boss/No Effect Sprites/Spell/Bringer-of-Death_Spell_12.png
+big_boss/No Effect Sprites/Spell/Bringer-of-Death_Spell_13.png
+big_boss/No Effect Sprites/Spell/Bringer-of-Death_Spell_14.png
+big_boss/No Effect Sprites/Spell/Bringer-of-Death_Spell_15.png
+big_boss/No Effect Sprites/Spell/Bringer-of-Death_Spell_16.png
+big_boss/No Effect Sprites/Spell/Bringer-of-Death_Spell_2.png
+big_boss/No Effect Sprites/Spell/Bringer-of-Death_Spell_3.png
+big_boss/No Effect Sprites/Spell/Bringer-of-Death_Spell_4.png
+big_boss/No Effect Sprites/Spell/Bringer-of-Death_Spell_5.png
+big_boss/No Effect Sprites/Spell/Bringer-of-Death_Spell_6.png
+big_boss/No Effect Sprites/Spell/Bringer-of-Death_Spell_7.png
+big_boss/No Effect Sprites/Spell/Bringer-of-Death_Spell_8.png
+big_boss/No Effect Sprites/Spell/Bringer-of-Death_Spell_9.png
+big_boss/Spell/Bringer-of-Death_Spell_1.png
+big_boss/Spell/Bringer-of-Death_Spell_10.png
+big_boss/Spell/Bringer-of-Death_Spell_11.png
+big_boss/Spell/Bringer-of-Death_Spell_12.png
+big_boss/Spell/Bringer-of-Death_Spell_13.png
+big_boss/Spell/Bringer-of-Death_Spell_14.png
+big_boss/Spell/Bringer-of-Death_Spell_15.png
+big_boss/Spell/Bringer-of-Death_Spell_16.png
+big_boss/Spell/Bringer-of-Death_Spell_2.png
+big_boss/Spell/Bringer-of-Death_Spell_3.png
+big_boss/Spell/Bringer-of-Death_Spell_4.png
+big_boss/Spell/Bringer-of-Death_Spell_5.png
+big_boss/Spell/Bringer-of-Death_Spell_6.png
+big_boss/Spell/Bringer-of-Death_Spell_7.png
+big_boss/Spell/Bringer-of-Death_Spell_8.png
+big_boss/Spell/Bringer-of-Death_Spell_9.png
+big_boss/Walk/Bringer-of-Death_Walk_1.png
+big_boss/Walk/Bringer-of-Death_Walk_2.png
+big_boss/Walk/Bringer-of-Death_Walk_3.png
+big_boss/Walk/Bringer-of-Death_Walk_4.png
+big_boss/Walk/Bringer-of-Death_Walk_5.png
+big_boss/Walk/Bringer-of-Death_Walk_6.png
+big_boss/Walk/Bringer-of-Death_Walk_7.png
+big_boss/Walk/Bringer-of-Death_Walk_8.png
+bossfight_background/eye_blink_512.gif
+bossfight_background/eye_blink_spritesheet_preview_1024.png
 evileye_shadow/waechter-20 Charset.png
 eye_shadow/waechter-19.png
 forest_tilesheet/free.png
 libgdx.png
 sprites/pixil-frame-0 (1).png
+sprites/player_attack.png

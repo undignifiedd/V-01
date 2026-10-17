@@ -1,6 +1,5 @@
 package com.Version_1.Entities;
 
-
 import com.Version_1.Anim.AnimationStateMachine;
 import com.Version_1.World.World;
 import com.badlogic.gdx.Gdx;
@@ -14,7 +13,8 @@ import com.badlogic.gdx.utils.Array;
 import java.util.Map;
 
 /**
- * The player. WASD = move (4-directional, top-down), J = attack.
+ * The player. J = attack. Movement has two modes, switched by the phase via setTopDown():
+ * side-view 1D (default, fights: A/D only) and top-down 2D (exploration: WASD).
  * Hit detection: the player checks its own attack hitbox against Attackables in the World
  * and calls takeDamage on them. Each swing hits a given target at most once.
  */
@@ -23,6 +23,7 @@ public class Player extends Entity implements Attackable {
     public enum State { IDLE, WALK, ATTACK }
 
     // --- Tuning (adjust to taste / to match the art) ---
+    private static final boolean ART_FACES_RIGHT = false; // which way the sprite sheet is DRAWN (yours faces left)
     private static final float SPEED = 120f;            // world units per second
     private static final int MAX_HEALTH = 100;
     private static final float MAX_RAGE = 100f;
@@ -40,8 +41,9 @@ public class Player extends Entity implements Attackable {
     private int health = MAX_HEALTH;
     private float rage = 0f;                            // rules for filling/using it: TBD
     private float invulnTimer = 0f;
-    private boolean facingRight = true;                 // art is drawn facing right
+    private boolean facingRight = true;                 // which way the player currently faces in the game
     private boolean attacking = false;
+    private boolean topDown = false;                    // false = 1D side-view (fights), true = 2D (exploration)
 
     public Player(float x, float y, float width, float height,
                   World world, Map<State, Animation<TextureRegion>> animations) {
@@ -82,8 +84,10 @@ public class Player extends Entity implements Attackable {
         float dy = 0f;
         if (Gdx.input.isKeyPressed(Input.Keys.A)) dx -= 1f;
         if (Gdx.input.isKeyPressed(Input.Keys.D)) dx += 1f;
-        if (Gdx.input.isKeyPressed(Input.Keys.W)) dy += 1f;
-        if (Gdx.input.isKeyPressed(Input.Keys.S)) dy -= 1f;
+        if (topDown) { // vertical movement only outside fights
+            if (Gdx.input.isKeyPressed(Input.Keys.W)) dy += 1f;
+            if (Gdx.input.isKeyPressed(Input.Keys.S)) dy -= 1f;
+        }
 
         if (dx != 0f || dy != 0f) {
             float len = (float) Math.sqrt(dx * dx + dy * dy); // normalize so diagonals aren't faster
@@ -138,10 +142,11 @@ public class Player extends Entity implements Attackable {
             return;
         }
         TextureRegion frame = anim.getCurrentFrame();
-        if (facingRight) {
+        boolean flip = (facingRight != ART_FACES_RIGHT); // flip only when facing opposite to how it's drawn
+        if (!flip) {
             batch.draw(frame, position.x, position.y, width, height);
         } else {
-            batch.draw(frame, position.x + width, position.y, -width, height); // flip
+            batch.draw(frame, position.x + width, position.y, -width, height);
         }
     }
 
@@ -154,10 +159,14 @@ public class Player extends Entity implements Attackable {
         invulnTimer = INVULN_TIME;
     }
 
-
     @Override
     public boolean isDead() {
         return health <= 0;
+    }
+
+    /** Phases call this: false for fights (A/D only, y stays where the phase put it), true for exploration (WASD). */
+    public void setTopDown(boolean topDown) {
+        this.topDown = topDown;
     }
 
     public int getHealth() { return health; }
