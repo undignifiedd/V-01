@@ -20,7 +20,7 @@ public class Boss extends Entity implements Attackable {
     }
 
     @Override
-    public void takeDamage() {
+    public void takeDamage(int amount) {
 
     }
 

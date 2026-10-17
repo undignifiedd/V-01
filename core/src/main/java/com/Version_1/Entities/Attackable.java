@@ -4,7 +4,7 @@ import com.badlogic.gdx.math.Rectangle;
 
 public interface Attackable {
 
-    void takeDamage();
+    void takeDamage(int amount);
 
     boolean isDead();
 

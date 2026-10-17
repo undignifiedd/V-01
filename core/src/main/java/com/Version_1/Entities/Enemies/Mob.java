@@ -10,7 +10,7 @@ public class Mob extends Entity implements Attackable {
     }
 
     @Override
-    public void takeDamage() {
+    public void takeDamage(int damage) {
 
     }
 
