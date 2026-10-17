@@ -20,7 +20,7 @@
 
 # \- Java, libGDX, IntelliJ, project generated with gdx-liftoff (modules: `core`, `lwjgl3`, shared `assets/`).
 
-# \- Existing reusable code from the developer's earlier work: `GameEngineBase` (abstract, extends `ApplicationAdapter`, owns the `SpriteBatch`). Each frame it runs `update(delta)`, then `draw()` \*\*inside\*\* `batch.begin()/end()`, then `drawUI()` (empty hook, called \*\*after\*\* `batch.end()`, used for `Stage.draw()`). It draws no background and has no `resize()`. Subclasses must call `super.create()` first. Also a generic `AnimationStateMachine<T>` (enum-keyed, wraps `Animation<TextureRegion>`).
+# \- Existing reusable code from the developer's earlier work: `GameEngineBase` (abstract, extends `ApplicationAdapter`, owns the `SpriteBatch`). Each frame it runs `update(delta)`, then `draw()` \*\*inside\*\* `batch.begin()/end()`, then `drawUI()` (empty hook, called \*\*after\*\* `batch.end()`, used for `Stage.draw()`). It draws no background and has no `resize()`. Subclasses must call `super.create()` first. Also a generic `AnimationStateMachine<T>` in `Version_1.Anim` (enum-keyed, wraps `Animation<TextureRegion>`). API: `setState(T)` (no-op if already in that state), `restart()` (replays the current animation from frame 0), `update(delta)`, `getCurrentFrame()`, `getStateTime()`, `isAnimationFinished()`, `getCurrentState()`. The constructor and `setState` throw if a state has no registered animation, so every enum value used must be in the map. Use `PlayMode.LOOP` for idle/walk and `PlayMode.NORMAL` for attacks, because `isAnimationFinished()` is only ever true for non-looping animations..
 
 # \- Camera/viewport: `OrthographicCamera` + `FitViewport` (640x360 virtual size, set in `Main`). Raw screen input must go through `viewport.unproject()`.
 
@@ -289,6 +289,8 @@
 # \## 10. Progress checklist (update and re-paste)
 
 # \- \[✅] Repo created, skeleton committed (GameEngineBase, Main, Entity, Attackable, Interactable, Phase, World)
+
+# \-\- [x] `AnimationStateMachine` moved to `Version_1.Anim` (with validation and `restart()`)
 
 # \- \[ ] Shared game-state class (quest flags, rage meter, player stats)
 
