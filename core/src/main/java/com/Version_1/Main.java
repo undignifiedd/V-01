@@ -12,10 +12,6 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
-/**
- * Orchestrator. Owns the shared things (batch via base, camera, viewport, stage,
- * textures) and runs ONE Phase at a time, swapping when it reports finished.
- */
 import java.util.EnumMap;
 import java.util.Map;
 
@@ -30,14 +26,15 @@ public class Main extends GameEngineBase {
     public static final float VIEW_W = 640;
     public static final float VIEW_H = 360;
 
-    // ---- TEMP: sprite sheet config. EDIT THESE to match your sheet. ----
-    private static final String PLAYER_SHEET = "sprites/pixil-frame-0 (1).png"; // file in assets/
-    private static final int FRAME_W = 93;       // pixel width of ONE frame in the sheet
-    private static final int FRAME_H = 118;       // pixel height of ONE frame
-    private static final int IDLE_ROW = 2,   IDLE_FRAMES = 3;    // row index (0 = top row) + frame count
-    private static final int WALK_ROW = 1,   WALK_FRAMES = 6;
-    private static final int ATTACK_ROW = 2, ATTACK_FRAMES = 5;
+    // Bottom-row poses are unevenly spaced. Equal crops keep their feet aligned.
+    private static final String PLAYER_SHEET = "sprites/combined_spritesheet.png";
+    private static final String JUMP_SHEET = "sprites/girl_jump_spritesheet_4x48x80.png";
+    private static final int FRAME_W = 64;
+    private static final int FRAME_H = 64;
+    private static final int PLAYER_ROW_Y = 277;
+    private static final int[] PLAYER_FRAME_X = {108, 166, 214, 272, 326, 390};
     private static final float FRAME_TIME = 0.1f; // seconds per frame
+    private static final float ATTACK_FRAME_TIME = 0.5f/3f;
     private static final float DRAW_W = 64;       // size on screen (world units)
     private static final float DRAW_H = 64;
     private static final float GROUND_Y = 60;     // y of the player's feet line
@@ -53,6 +50,7 @@ public class Main extends GameEngineBase {
     // TEMP test harness
     private World world;
     private Texture playerSheet;
+    private Texture jumpSheet;
 
     @Override
     public void create() {
@@ -74,25 +72,35 @@ public class Main extends GameEngineBase {
         playerSheet = new Texture(PLAYER_SHEET);
         playerSheet.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest); // crisp pixels
 
-        TextureRegion[][] grid = TextureRegion.split(playerSheet, FRAME_W, FRAME_H);
+        TextureRegion[] frames = new TextureRegion[PLAYER_FRAME_X.length];
+        for (int i = 0; i < frames.length; i++) {
+            frames[i] = new TextureRegion(playerSheet, PLAYER_FRAME_X[i], PLAYER_ROW_Y, FRAME_W, FRAME_H);
+        }
         Map<Player.State, Animation<TextureRegion>> anims = new EnumMap<>(Player.State.class);
-        anims.put(Player.State.IDLE, buildAnimation(grid, IDLE_ROW, IDLE_FRAMES, Animation.PlayMode.LOOP));
-        anims.put(Player.State.WALK, buildAnimation(grid, WALK_ROW, WALK_FRAMES, Animation.PlayMode.LOOP));
-        anims.put(Player.State.ATTACK, buildAnimation(grid, ATTACK_ROW, ATTACK_FRAMES, Animation.PlayMode.NORMAL));
+        anims.put(Player.State.IDLE, buildAnimation(frames, 0, 1, FRAME_TIME, Animation.PlayMode.LOOP));
+        anims.put(Player.State.WALK, buildAnimation(frames, 0, 3, FRAME_TIME, Animation.PlayMode.LOOP));
+        anims.put(Player.State.ATTACK, buildAnimation(frames, 3, 3, ATTACK_FRAME_TIME, Animation.PlayMode.NORMAL));
+        jumpSheet = new Texture(JUMP_SHEET);
+        jumpSheet.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        TextureRegion[] jumpFrames = TextureRegion.split(jumpSheet, 48, 80)[0];
+        anims.put(Player.State.TAKEOFF, buildAnimation(jumpFrames, 0, 1, FRAME_TIME, Animation.PlayMode.NORMAL));
+        anims.put(Player.State.RISE, buildAnimation(jumpFrames, 1, 1, FRAME_TIME, Animation.PlayMode.NORMAL));
+        anims.put(Player.State.FALL, buildAnimation(jumpFrames, 2, 1, FRAME_TIME, Animation.PlayMode.NORMAL));
+        anims.put(Player.State.LAND, buildAnimation(jumpFrames, 3, 1, FRAME_TIME, Animation.PlayMode.NORMAL));
 
         Player player = new Player(100, GROUND_Y, DRAW_W, DRAW_H, world, anims);
         world.spawn(player);
         // ---- end TEMP ----
     }
 
-    /** TEMP helper: builds one animation from the first `frames` cells of a sheet row. */
-    private Animation<TextureRegion> buildAnimation(TextureRegion[][] grid, int row, int frames,
+    /** Builds an animation from a consecutive range of the cropped player poses. */
+    private Animation<TextureRegion> buildAnimation(TextureRegion[] frames, int first, int count, float frameTime,
                                                     Animation.PlayMode mode) {
         Array<TextureRegion> frameList = new Array<>();
-        for (int i = 0; i < frames; i++) {
-            frameList.add(grid[row][i]);
+        for (int i = first; i < first + count; i++) {
+            frameList.add(frames[i]);
         }
-        return new Animation<>(FRAME_TIME, frameList, mode);
+        return new Animation<>(frameTime, frameList, mode);
     }
 
     /** The story order lives here. Add a case as each phase gets written. */
@@ -163,6 +171,7 @@ public class Main extends GameEngineBase {
         }
         stage.dispose();
         playerSheet.dispose(); // TEMP
+        jumpSheet.dispose();
         super.dispose(); // disposes the batch
     }
 

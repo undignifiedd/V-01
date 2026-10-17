@@ -103,6 +103,9 @@ forest_tilesheet/free.png
 libgdx.png
 notebook.jpg
 sprites/combined_spritesheet.png
+<<<<<<< Updated upstream
 sprites/girl_jump_spritesheet_4x48x80.png
+=======
+>>>>>>> Stashed changes
 sprites/pixil-frame-0 (1).png
 sprites/player_attack.png

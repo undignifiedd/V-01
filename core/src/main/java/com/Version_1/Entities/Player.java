@@ -13,18 +13,25 @@ import com.badlogic.gdx.utils.Array;
 import java.util.Map;
 
 /**
- * The player. J = attack. Movement has two modes, switched by the phase via setTopDown():
- * side-view 1D (default, fights: A/D only) and top-down 2D (exploration: WASD).
+ * The player. J = attack, W = single jump in fights.
+ * setTopDown(true) switches from side-view fights to WASD exploration.
  * Hit detection: the player checks its own attack hitbox against Attackables in the World
  * and calls takeDamage on them. Each swing hits a given target at most once.
  */
 public class Player extends Entity implements Attackable {
 
-    public enum State { IDLE, WALK, ATTACK }
+    public enum State { IDLE, WALK, ATTACK, TAKEOFF, RISE, FALL, LAND }
 
     // --- Tuning (adjust to taste / to match the art) ---
-    private static final boolean ART_FACES_RIGHT = false; // which way the sprite sheet is DRAWN (yours faces left)
+    private static final boolean ART_FACES_RIGHT = false; // idle/walk face left; attack poses face right
+    private static final float ATTACK_WIDTH_SCALE = 1.4f;
     private static final float SPEED = 120f;            // world units per second
+    private static final float JUMP_SPEED = 300f;
+    private static final float GRAVITY = 900f;
+    private static final float TAKEOFF_TIME = 0.08f;
+    private static final float LAND_TIME = 0.08f;
+    private static final float ATTACK_BUFFER_TIME = 0.2f;
+    private static final float IDLE_TURN_TIME = 3f;
     private static final int MAX_HEALTH = 100;
     private static final float MAX_RAGE = 100f;
     private static final float INVULN_TIME = 0.6f;      // seconds of immunity after a hit
@@ -41,14 +48,21 @@ public class Player extends Entity implements Attackable {
     private int health = MAX_HEALTH;
     private float rage = 0f;                            // rules for filling/using it: TBD
     private float invulnTimer = 0f;
+    private float idleTurnTimer = 0f;
     private boolean facingRight = true;                 // which way the player currently faces in the game
     private boolean attacking = false;
     private boolean topDown = false;                    // false = 1D side-view (fights), true = 2D (exploration)
+    private float groundY;
+    private float verticalVelocity;
+    private float jumpTime;
+    private float landingTimer;
+    private float attackBufferTimer;
 
     public Player(float x, float y, float width, float height,
                   World world, Map<State, Animation<TextureRegion>> animations) {
         super(x, y, width, height);
         this.world = world;
+        this.groundY = y;
         this.anim = new AnimationStateMachine<>(animations, State.IDLE);
     }
 
@@ -61,20 +75,33 @@ public class Player extends Entity implements Attackable {
             return;
         }
 
+        attackBufferTimer = Math.max(0f, attackBufferTimer - delta);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.J)) {
+            attackBufferTimer = ATTACK_BUFFER_TIME;
+        }
+
         anim.update(delta);
+        updateJumpMotion(delta);
 
         if (attacking) {
             checkAttackHits();
-            if (anim.isAnimationFinished()) {
-                attacking = false;
-                anim.setState(State.IDLE);
-            }
-            return; // no moving while attacking
+            if (!anim.isAnimationFinished()) return; // no moving while attacking
+            attacking = false;
+            anim.setState(State.IDLE);
         }
 
         handleMovement(delta);
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.J)) {
+        if (!topDown && isGrounded() && landingTimer <= 0f
+            && Gdx.input.isKeyJustPressed(Input.Keys.W)) {
+            verticalVelocity = JUMP_SPEED;
+            jumpTime = 0f;
+            idleTurnTimer = 0f;
+        }
+        updateJumpAnimation();
+
+        // Exploration has no jumping, so attacks remain available there.
+        if (attackBufferTimer > 0f && (topDown || isGrounded())) {
             startAttack();
         }
     }
@@ -90,19 +117,59 @@ public class Player extends Entity implements Attackable {
         }
 
         if (dx != 0f || dy != 0f) {
+            idleTurnTimer = 0f;
             float len = (float) Math.sqrt(dx * dx + dy * dy); // normalize so diagonals aren't faster
             position.x += (dx / len) * SPEED * delta;
             position.y += (dy / len) * SPEED * delta;
             if (dx != 0f) {
                 facingRight = dx > 0f;
             }
-            anim.setState(State.WALK);
+            if (topDown || (isGrounded() && landingTimer <= 0f)) {
+                anim.setState(State.WALK);
+            }
         } else {
+            if (!topDown && (!isGrounded() || landingTimer > 0f)) {
+                return;
+            }
             anim.setState(State.IDLE);
+            idleTurnTimer += delta;
+            while (idleTurnTimer >= IDLE_TURN_TIME) {
+                facingRight = !facingRight;
+                idleTurnTimer -= IDLE_TURN_TIME;
+            }
+        }
+    }
+
+    private void updateJumpMotion(float delta) {
+        if (topDown) return;
+        landingTimer = Math.max(0f, landingTimer - delta);
+        if (isGrounded()) {
+            position.y = groundY;
+            return;
+        }
+        jumpTime += delta;
+        position.y += verticalVelocity * delta - 0.5f * GRAVITY * delta * delta;
+        verticalVelocity -= GRAVITY * delta;
+        if (position.y <= groundY && verticalVelocity <= 0f) {
+            position.y = groundY;
+            verticalVelocity = 0f;
+            landingTimer = LAND_TIME;
+        }
+    }
+
+    private void updateJumpAnimation() {
+        if (topDown || attacking) return;
+        if (!isGrounded()) {
+            anim.setState(jumpTime < TAKEOFF_TIME ? State.TAKEOFF
+                : verticalVelocity > 0f ? State.RISE : State.FALL);
+        } else if (landingTimer > 0f) {
+            anim.setState(State.LAND);
         }
     }
 
     private void startAttack() {
+        attackBufferTimer = 0f; // consume this press so it cannot fire again
+        idleTurnTimer = 0f;
         attacking = true;
         hitThisSwing.clear();
         anim.setState(State.ATTACK);
@@ -142,12 +209,25 @@ public class Player extends Entity implements Attackable {
             return;
         }
         TextureRegion frame = anim.getCurrentFrame();
-        boolean flip = (facingRight != ART_FACES_RIGHT); // flip only when facing opposite to how it's drawn
-        if (!flip) {
-            batch.draw(frame, position.x, position.y, width, height);
-        } else {
-            batch.draw(frame, position.x + width, position.y, -width, height);
+        boolean attackFrame = anim.getCurrentState() == State.ATTACK;
+        boolean artFacesRight =
+            attackFrame || ART_FACES_RIGHT;
+        boolean flip = facingRight != artFacesRight; // flip only when facing opposite to how it's drawn
+        float drawWidth = attackFrame ? width * ATTACK_WIDTH_SCALE : width;
+        boolean jumpFrame = anim.getCurrentState() == State.TAKEOFF
+            || anim.getCurrentState() == State.RISE || anim.getCurrentState() == State.FALL
+            || anim.getCurrentState() == State.LAND;
+        // Jump frames are 48x80; keep their proportions at the normal sprite's pixel scale.
+        float drawHeight = height;
+        float drawY = position.y;
+        if (jumpFrame) {
+            drawWidth = width * 48f / 64f;
+            drawHeight = height * 80f / 64f;
+            drawY -= height * 4f / 64f; // four transparent rows below the feet
         }
+        float drawX = position.x + (width - drawWidth) / 2f;
+        batch.draw(frame, flip ? drawX + drawWidth : drawX, drawY,
+            flip ? -drawWidth : drawWidth, drawHeight);
     }
 
     @Override
@@ -164,9 +244,27 @@ public class Player extends Entity implements Attackable {
         return health <= 0;
     }
 
-    /** Phases call this: false for fights (A/D only, y stays where the phase put it), true for exploration (WASD). */
+    /** False for fights (A/D and W jump), true for exploration (WASD). */
     public void setTopDown(boolean topDown) {
+        if (this.topDown == topDown) return;
         this.topDown = topDown;
+        groundY = position.y;
+        verticalVelocity = 0f;
+        landingTimer = 0f;
+        if (!attacking) anim.setState(State.IDLE);
+    }
+
+    public boolean isGrounded() {
+        return !topDown && position.y <= groundY && verticalVelocity <= 0f;
+    }
+
+    /** Sets a fight's ground line and places the player on it. */
+    public void setGroundY(float groundY) {
+        this.groundY = groundY;
+        position.y = groundY;
+        verticalVelocity = 0f;
+        landingTimer = 0f;
+        if (!attacking) anim.setState(State.IDLE);
     }
 
     public int getHealth() { return health; }
