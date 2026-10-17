@@ -1,22 +1,21 @@
 package com.Version_1.Entities;
 
 import com.Version_1.Anim.AnimationStateMachine;
-import com.Version_1.World.World;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.math.Vector2;
 
 import java.util.Map;
 
 /**
- * The player. J = attack, W = single jump in fights.
+ * The player. J = ground/air attack, W = jump / double jump, Space = dash.
  * setTopDown(true) switches from side-view fights to WASD exploration.
- * Hit detection: the player checks its own attack hitbox against Attackables in the World
- * and calls takeDamage on them. Each swing hits a given target at most once.
+ * Exposes the active attack hitbox; the fight phase resolves collisions and damage.
  */
 public class Player extends Entity implements Attackable {
 
@@ -26,8 +25,16 @@ public class Player extends Entity implements Attackable {
     private static final boolean ART_FACES_RIGHT = false; // idle/walk face left; attack poses face right
     private static final float ATTACK_WIDTH_SCALE = 1.4f;
     private static final float SPEED = 120f;            // world units per second
-    private static final float JUMP_SPEED = 300f;
-    private static final float GRAVITY = 900f;
+    private static final float ATTACK_MOVE_SCALE = 0.5f;
+    private static final float DASH_SPEED = 475f;
+    private static final float DASH_TIME = 0.18f;
+    private static final float DASH_COOLDOWN = 0.65f;
+    private static final float KNOCKBACK_DRAG = 12f;
+    private static final float JUMP_SPEED = 360f;
+    private static final float GRAVITY = 800f;
+    private static final int MAX_JUMPS = 2;
+    private static final float JUMP_BUFFER_TIME = 0.15f;
+    private static final float COYOTE_TIME = 0.1f;
     private static final float TAKEOFF_TIME = 0.08f;
     private static final float LAND_TIME = 0.08f;
     private static final float ATTACK_BUFFER_TIME = 0.2f;
@@ -36,14 +43,15 @@ public class Player extends Entity implements Attackable {
     private static final float MAX_RAGE = 100f;
     private static final float INVULN_TIME = 0.6f;      // seconds of immunity after a hit
     private static final int ATTACK_DAMAGE = 10;
-    private static final float ATTACK_RANGE = 28f;      // hitbox length in front of the player
+    private static final float ATTACK_RANGE = 45f;      // hitbox length in front of the player
     private static final float HIT_START = 0.10f;       // seconds into the attack anim when damage starts
     private static final float HIT_END = 0.25f;         // ...and when it stops
 
-    private final World world;
     private final AnimationStateMachine<State> anim;
     private final Rectangle attackBox = new Rectangle();
-    private final Array<Attackable> hitThisSwing = new Array<>();
+    private int attackId;
+    private final Vector2 moveDirection = new Vector2();
+    private final Vector2 dashDirection = new Vector2();
 
     private int health = MAX_HEALTH;
     private float rage = 0f;                            // rules for filling/using it: TBD
@@ -57,56 +65,95 @@ public class Player extends Entity implements Attackable {
     private float jumpTime;
     private float landingTimer;
     private float attackBufferTimer;
+    private float jumpBufferTimer;
+    private float coyoteTimer = COYOTE_TIME;
+    private int jumpsUsed;
+    private float dashTimer;
+    private float dashCooldownTimer;
+    private float knockbackVelocity;
+    private float effectTime;
+    private boolean burning;
+    private boolean dashMovedThisFrame;
 
     public Player(float x, float y, float width, float height,
-                  World world, Map<State, Animation<TextureRegion>> animations) {
+                  Map<State, Animation<TextureRegion>> animations) {
         super(x, y, width, height);
-        this.world = world;
         this.groundY = y;
         this.anim = new AnimationStateMachine<>(animations, State.IDLE);
     }
 
     @Override
     public void update(float delta) {
+        dashMovedThisFrame = false;
         if (invulnTimer > 0) {
             invulnTimer -= delta;
         }
         if (isDead()) {
             return;
         }
+        effectTime += delta;
+        dashCooldownTimer = Math.max(0f, dashCooldownTimer - delta);
 
         attackBufferTimer = Math.max(0f, attackBufferTimer - delta);
         if (Gdx.input.isKeyJustPressed(Input.Keys.J)) {
             attackBufferTimer = ATTACK_BUFFER_TIME;
         }
+        jumpBufferTimer = Math.max(0f, jumpBufferTimer - delta);
+        if (!topDown && Gdx.input.isKeyJustPressed(Input.Keys.W)) {
+            jumpBufferTimer = JUMP_BUFFER_TIME;
+        }
 
         anim.update(delta);
         updateJumpMotion(delta);
+        readMovementInput();
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && dashCooldownTimer <= 0f) {
+            startDash();
+        }
+        if (isDashing()) {
+            dashMovedThisFrame = true;
+            float dashDelta = Math.min(delta, dashTimer);
+            position.mulAdd(dashDirection, DASH_SPEED * dashDelta);
+            dashTimer = Math.max(0f, dashTimer - delta);
+            updateJumpAnimation();
+            return;
+        }
+        position.x += knockbackVelocity * delta;
+        knockbackVelocity *= (float) Math.exp(-KNOCKBACK_DRAG * delta);
+        if (Math.abs(knockbackVelocity) < 1f) knockbackVelocity = 0f;
 
         if (attacking) {
-            checkAttackHits();
-            if (!anim.isAnimationFinished()) return; // no moving while attacking
+            if (!anim.isAnimationFinished()) {
+                handleMovement(delta);
+                return; // jumping and the next swing wait for recovery
+            }
             attacking = false;
             anim.setState(State.IDLE);
         }
 
         handleMovement(delta);
 
-        if (!topDown && isGrounded() && landingTimer <= 0f
-            && Gdx.input.isKeyJustPressed(Input.Keys.W)) {
+        if (!topDown && jumpBufferTimer > 0f && jumpsUsed < MAX_JUMPS) {
+            // A grace-window jump counts as the ground jump, preserving one air jump.
+            if (isGrounded() || coyoteTimer > 0f) jumpsUsed = 0;
+            jumpsUsed++;
             verticalVelocity = JUMP_SPEED;
             jumpTime = 0f;
+            landingTimer = 0f;
             idleTurnTimer = 0f;
+            jumpBufferTimer = 0f;
+            coyoteTimer = 0f;
+            anim.setState(State.TAKEOFF);
+            anim.restart();
         }
         updateJumpAnimation();
 
-        // Exploration has no jumping, so attacks remain available there.
-        if (attackBufferTimer > 0f && (topDown || isGrounded())) {
+        if (attackBufferTimer > 0f) {
             startAttack();
         }
     }
 
-    private void handleMovement(float delta) {
+    private void readMovementInput() {
         float dx = 0f;
         float dy = 0f;
         if (Gdx.input.isKeyPressed(Input.Keys.A)) dx -= 1f;
@@ -115,12 +162,17 @@ public class Player extends Entity implements Attackable {
             if (Gdx.input.isKeyPressed(Input.Keys.W)) dy += 1f;
             if (Gdx.input.isKeyPressed(Input.Keys.S)) dy -= 1f;
         }
+        moveDirection.set(dx, dy).nor();
+    }
 
+    private void handleMovement(float delta) {
+        float dx = moveDirection.x;
+        float dy = moveDirection.y;
         if (dx != 0f || dy != 0f) {
             idleTurnTimer = 0f;
-            float len = (float) Math.sqrt(dx * dx + dy * dy); // normalize so diagonals aren't faster
-            position.x += (dx / len) * SPEED * delta;
-            position.y += (dy / len) * SPEED * delta;
+            float moveSpeed = SPEED * (attacking ? ATTACK_MOVE_SCALE : 1f);
+            position.mulAdd(moveDirection, moveSpeed * delta);
+            if (attacking) return; // keep the swing animation and facing direction
             if (dx != 0f) {
                 facingRight = dx > 0f;
             }
@@ -128,7 +180,7 @@ public class Player extends Entity implements Attackable {
                 anim.setState(State.WALK);
             }
         } else {
-            if (!topDown && (!isGrounded() || landingTimer > 0f)) {
+            if (attacking || (!topDown && (!isGrounded() || landingTimer > 0f))) {
                 return;
             }
             anim.setState(State.IDLE);
@@ -140,13 +192,46 @@ public class Player extends Entity implements Attackable {
         }
     }
 
+    private void startDash() {
+        dashDirection.set(moveDirection);
+        if (dashDirection.isZero()) dashDirection.set(facingRight ? 1f : -1f, 0f);
+        if (dashDirection.x != 0f) facingRight = dashDirection.x > 0f;
+        attacking = false;
+        attackBufferTimer = 0f;
+        idleTurnTimer = 0f;
+        knockbackVelocity = 0f;
+        dashTimer = DASH_TIME;
+        dashCooldownTimer = DASH_COOLDOWN;
+        anim.setState(State.WALK);
+        anim.restart();
+    }
+
+    public boolean isDashing() { return !isDead() && dashTimer > 0f; }
+    public boolean didDashThisFrame() { return dashMovedThisFrame; }
+    public float getDashDirectionX() { return dashDirection.x; }
+
+    /** The phase can extend a dash just far enough to clear an overlapping enemy. */
+    public void extendDashToX(float exitX) {
+        if (!dashMovedThisFrame || isDead() || dashDirection.x == 0f) return;
+        float remaining = (exitX - position.x) / (dashDirection.x * DASH_SPEED);
+        if (remaining > 0f) dashTimer = Math.max(dashTimer, remaining + 0.01f);
+    }
+    public boolean isBurning() { return burning; }
+    public void setBurning(boolean burning) { this.burning = burning; }
+    public void knockBack(float velocity) { knockbackVelocity = velocity; }
+
     private void updateJumpMotion(float delta) {
         if (topDown) return;
         landingTimer = Math.max(0f, landingTimer - delta);
         if (isGrounded()) {
             position.y = groundY;
+            jumpsUsed = 0;
+            coyoteTimer = COYOTE_TIME;
             return;
         }
+        coyoteTimer = Math.max(0f, coyoteTimer - delta);
+        // Walking off a ledge spends the ground jump once the grace window ends.
+        if (coyoteTimer <= 0f && jumpsUsed == 0) jumpsUsed = 1;
         jumpTime += delta;
         position.y += verticalVelocity * delta - 0.5f * GRAVITY * delta * delta;
         verticalVelocity -= GRAVITY * delta;
@@ -154,6 +239,8 @@ public class Player extends Entity implements Attackable {
             position.y = groundY;
             verticalVelocity = 0f;
             landingTimer = LAND_TIME;
+            jumpsUsed = 0;
+            coyoteTimer = COYOTE_TIME;
         }
     }
 
@@ -171,41 +258,28 @@ public class Player extends Entity implements Attackable {
         attackBufferTimer = 0f; // consume this press so it cannot fire again
         idleTurnTimer = 0f;
         attacking = true;
-        hitThisSwing.clear();
+        attackId++;
         anim.setState(State.ATTACK);
         anim.restart();
     }
 
-    private void checkAttackHits() {
+    public boolean isAttackActive() {
         float t = anim.getStateTime();
-        if (t < HIT_START || t > HIT_END) {
-            return;
-        }
-
-        float boxX = facingRight ? position.x + width : position.x - ATTACK_RANGE;
-        attackBox.set(boxX, position.y, ATTACK_RANGE, height);
-
-        Array<Entity> entities = world.getEntities();
-        for (int i = 0; i < entities.size; i++) {
-            Entity e = entities.get(i);
-            if (e == this || !(e instanceof Attackable)) {
-                continue;
-            }
-            Attackable target = (Attackable) e;
-            if (target.isDead() || hitThisSwing.contains(target, true)) {
-                continue;
-            }
-            if (attackBox.overlaps(target.getBounds())) {
-                hitThisSwing.add(target);
-                target.takeDamage(ATTACK_DAMAGE);
-            }
-        }
+        return !isDead() && attacking && t >= HIT_START && t <= HIT_END;
     }
+
+    public Rectangle getAttackBounds() {
+        float boxX = facingRight ? position.x + width : position.x - ATTACK_RANGE;
+        return attackBox.set(boxX, position.y, ATTACK_RANGE, height);
+    }
+
+    public int getAttackId() { return attackId; }
+    public int getAttackDamage() { return ATTACK_DAMAGE; }
 
     @Override
     public void draw(SpriteBatch batch) {
         // Blink while invulnerable.
-        if (invulnTimer > 0 && ((int) (invulnTimer * 20) % 2 == 0)) {
+        if (!burning && !isDashing() && invulnTimer > 0 && ((int) (invulnTimer * 20) % 2 == 0)) {
             return;
         }
         TextureRegion frame = anim.getCurrentFrame();
@@ -226,13 +300,40 @@ public class Player extends Entity implements Attackable {
             drawY -= height * 4f / 64f; // four transparent rows below the feet
         }
         float drawX = position.x + (width - drawWidth) / 2f;
+        Color old = batch.getColor();
+        float r = old.r, g = old.g, b = old.b, a = old.a;
+        if (isDashing()) {
+            for (int i = 2; i >= 1; i--) {
+                batch.setColor(0.3f, 0.8f, 1f, 0.15f * (3 - i));
+                drawFrame(batch, frame, drawX - dashDirection.x * 14f * i,
+                    drawY - dashDirection.y * 14f * i, drawWidth, drawHeight, flip);
+            }
+        }
+        if (burning) {
+            float flicker = 0.5f + 0.5f * (float) Math.sin(effectTime * 24f);
+            float glow = 0.4f + 0.2f * flicker;
+            batch.setColor(1f, 0.45f + 0.2f * flicker, 0.02f, glow);
+            drawFrame(batch, frame, drawX - drawWidth * 0.06f, drawY - drawHeight * 0.04f,
+                drawWidth * 1.12f, drawHeight * 1.08f, flip);
+            batch.setColor(1f, 0.55f + 0.15f * flicker, 0.06f, a);
+        } else if (isDashing()) {
+            batch.setColor(0.65f, 0.9f, 1f, a);
+        } else {
+            batch.setColor(r, g, b, a);
+        }
+        drawFrame(batch, frame, drawX, drawY, drawWidth, drawHeight, flip);
+        batch.setColor(r, g, b, a);
+    }
+
+    private void drawFrame(SpriteBatch batch, TextureRegion frame, float drawX, float drawY,
+                           float drawWidth, float drawHeight, boolean flip) {
         batch.draw(frame, flip ? drawX + drawWidth : drawX, drawY,
             flip ? -drawWidth : drawWidth, drawHeight);
     }
 
     @Override
     public void takeDamage(int amount) {
-        if (isDead() || invulnTimer > 0) {
+        if (amount <= 0 || isDead() || invulnTimer > 0 || isDashing()) {
             return;
         }
         health = Math.max(0, health - amount);
@@ -249,9 +350,7 @@ public class Player extends Entity implements Attackable {
         if (this.topDown == topDown) return;
         this.topDown = topDown;
         groundY = position.y;
-        verticalVelocity = 0f;
-        landingTimer = 0f;
-        if (!attacking) anim.setState(State.IDLE);
+        resetMovement();
     }
 
     public boolean isGrounded() {
@@ -262,8 +361,20 @@ public class Player extends Entity implements Attackable {
     public void setGroundY(float groundY) {
         this.groundY = groundY;
         position.y = groundY;
+        resetMovement();
+    }
+
+    private void resetMovement() {
         verticalVelocity = 0f;
+        jumpTime = 0f;
         landingTimer = 0f;
+        jumpsUsed = 0;
+        jumpBufferTimer = 0f;
+        coyoteTimer = COYOTE_TIME;
+        dashTimer = 0f;
+        dashMovedThisFrame = false;
+        dashCooldownTimer = 0f;
+        knockbackVelocity = 0f;
         if (!attacking) anim.setState(State.IDLE);
     }
 

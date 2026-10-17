@@ -24,6 +24,7 @@ public abstract class Enemy extends Entity implements Attackable {
     public Enemy(float x, float y, float width, float height,
                  int maxHealth, Player player, World world) {
         super(x, y, width, height);
+        if (maxHealth <= 0) throw new IllegalArgumentException("maxHealth must be positive");
         this.maxHealth = maxHealth;
         this.health = maxHealth;
         this.player = player;
@@ -34,7 +35,7 @@ public abstract class Enemy extends Entity implements Attackable {
 
     @Override
     public void takeDamage(int amount) {
-        if (isDead()) return;          // ignore hits after death
+        if (isDead() || amount <= 0) return;
         health -= amount;
         if (health <= 0) {
             health = 0;
