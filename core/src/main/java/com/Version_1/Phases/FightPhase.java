@@ -5,6 +5,8 @@ import com.Version_1.Entities.Entity;
 import com.Version_1.Entities.Player;
 import com.Version_1.Entities.Projectile;
 import com.Version_1.Entities.Enemies.Boss;
+import com.Version_1.Entities.Enemies.Mob;
+import com.Version_1.Entities.Enemies.Mob2;
 import com.Version_1.World.World;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -44,10 +46,19 @@ public class FightPhase implements Phase {
     private boolean finished;
     private float burnRemaining;
     private float burnTickTimer;
+    private final Animation<TextureRegion> mobAnimation;
+    private final Animation<TextureRegion> mob2Animation;
+    private final Array<Mob> shadowMobs = new Array<>();
+    private static final int SHADOW_MOB_COUNT = 4;
+    private int summonedMobs;
+    private float summonTimer;
+    private float shadowSpawnX;
+    private boolean shadowPuddleActive;
 
     public FightPhase(World world, Player player, Boss boss, OrthographicCamera camera,
                       BitmapFont font, Animation<TextureRegion> background,
-                      TextureRegion crack, TextureRegion pixel, float arenaWidth, float arenaHeight) {
+                      TextureRegion crack, TextureRegion pixel, float arenaWidth, float arenaHeight,
+                      Animation<TextureRegion> mobAnimation, Animation<TextureRegion> mob2Animation) {
         this.world = world;
         this.player = player;
         this.boss = boss;
@@ -56,6 +67,8 @@ public class FightPhase implements Phase {
         this.background = background;
         this.crack = crack;
         this.pixel = pixel;
+        this.mobAnimation = mobAnimation;
+        this.mob2Animation = mob2Animation;
         this.arenaWidth = arenaWidth;
         this.arenaHeight = arenaHeight;
         this.groundY = player.getPosition().y;
@@ -83,6 +96,12 @@ public class FightPhase implements Phase {
         }
         resolveProjectiles();
         resolveContactFire(delta);
+        if (boss.isInShadowPhase() && !shadowPuddleActive) {
+            shadowSpawnX = boss.getBounds().x + boss.getBounds().width / 2f;
+            shadowPuddleActive = true;
+        }
+        updateShadowWave(delta);
+        resolveMobs();
 
         if (boss.hasFinisherImpacted()) {
             if (endingTime < 0f) endingTime = 0f;
@@ -97,7 +116,7 @@ public class FightPhase implements Phase {
     }
 
     private void resolveDashPassThrough() {
-        if (!player.didDashThisFrame() || boss.isDead()
+        if (!player.didDashThisFrame() || boss.isDead() || boss.isInShadowPhase()
             || !player.getBounds().overlaps(boss.getContactBounds())) return;
         Rectangle body = boss.getContactBounds();
         float exitX = player.getDashDirectionX() > 0f ? body.x + body.width + 4f
@@ -107,13 +126,14 @@ public class FightPhase implements Phase {
     }
 
     private void resolveContactFire(float delta) {
-        if (player.isDead() || boss.isDead() || boss.isFinishing()) {
+        if (player.isDead() || boss.isDead() || boss.isFinishing() || boss.isInShadowPhase()) {
             burnRemaining = 0f;
             burnTickTimer = 0f;
             player.setBurning(false);
             return;
         }
-        boolean touching = !player.isDashing() && player.getBounds().overlaps(boss.getContactBounds());
+        boolean touching = !player.isDashing() && !player.didDashThisFrame()
+            && player.getContactBounds().overlaps(boss.getContactBounds());
         burnRemaining = touching ? BURN_DURATION : Math.max(0f, burnRemaining - delta);
         burnTickTimer = Math.max(0f, burnTickTimer - delta);
         player.setBurning(burnRemaining > 0f);
@@ -171,13 +191,64 @@ public class FightPhase implements Phase {
         }
     }
 
+    private void updateShadowWave(float delta) {
+        if (!boss.isSubmerged() || player.isDead()) return;
+        summonTimer -= delta;
+        if (summonedMobs < SHADOW_MOB_COUNT && summonTimer <= 0f) {
+            float x = MathUtils.clamp(shadowSpawnX - 15f, 12f, arenaWidth - 42f);
+            Mob mob = summonedMobs % 2 == 0
+                ? new Mob(x, groundY, mobAnimation, player, world)
+                : new Mob2(x, groundY, mob2Animation, player, world);
+            mob.emergeFromShadow(summonedMobs % 2 == 0 ? -1f : 1f);
+            shadowMobs.add(mob);
+            world.spawn(mob);
+            summonedMobs++;
+            summonTimer = 0.8f;
+        }
+        if (summonedMobs < SHADOW_MOB_COUNT) return;
+        for (int i = 0; i < shadowMobs.size; i++) {
+            Mob mob = shadowMobs.get(i);
+            if (!mob.isRemoved()) return;
+        }
+        boss.returnFromShadow();
+    }
+
+    private void resolveMobs() {
+        if (player.isDead() || boss.isFinishing()) return;
+        for (int i = 0; i < shadowMobs.size; i++) {
+            Mob mob = shadowMobs.get(i);
+            if (mob.isDead() || mob.isRemoved() || mob.isEmerging()) continue;
+            if (mob instanceof Mob2) {
+                Mob2 bomb = (Mob2) mob;
+                // Proximity starts a fixed fuse; moving away can evade the eventual blast.
+                Rectangle body = player.getContactBounds();
+                if (!bomb.isArmed() && !bomb.isStaggered() && !player.isDashing() && !player.didDashThisFrame()
+                    && bomb.getBlastBounds().overlaps(body)) bomb.arm();
+                if (bomb.consumeBlast() && bomb.getBlastBounds().overlaps(body)
+                    && !player.didDashThisFrame()) player.takeDamage(16);
+            } else if (player.isDashing() || player.didDashThisFrame()) {
+                if (mob.isAttached()) {
+                    mob.detach();
+                    mob.getPosition().x = MathUtils.clamp(mob.getPosition().x,
+                        12f, arenaWidth - 12f - mob.getBounds().width);
+                }
+            } else {
+                if (mob.canLatch() && mob.getBounds().overlaps(player.getContactBounds())) mob.attach();
+                if (mob.isAttached()) {
+                    mob.followPlayer();
+                    if (mob.consumeDrainTick()) player.takeDamage(4);
+                }
+            }
+        }
+    }
+
     private void resolveProjectiles() {
         Array<Entity> entities = world.getEntities();
         for (int i = 0; i < entities.size; i++) {
             Entity entity = entities.get(i);
             if (!(entity instanceof Projectile) || entity.isRemoved()) continue;
             Projectile projectile = (Projectile) entity;
-            if (boss.isFinishing() || player.isDead() || projectile.getPosition().x < -100f
+            if (boss.isFinishing() || boss.isInShadowPhase() || player.isDead() || projectile.getPosition().x < -100f
                 || projectile.getPosition().x > arenaWidth + 100f) {
                 projectile.remove();
             } else if (projectile.getOwner() == boss && projectile.getBounds().overlaps(player.getBounds())) {
@@ -198,8 +269,10 @@ public class FightPhase implements Phase {
         batch.draw(background.getKeyFrame(time), arenaWidth / 2f - 80f, 170f, 160f, 160f);
         fill(batch, 0f, 0f, arenaWidth, groundY, 0.075f, 0.055f, 0.1f, 1f);
         fill(batch, 0f, groundY - 1f, arenaWidth, 1f, 0.35f, 0.23f, 0.38f, 1f);
+        if (shadowPuddleActive) drawShadowPuddle(batch);
         batch.setColor(Color.WHITE);
         world.draw(batch);
+        drawMobEffects(batch);
         if (player.isBurning() && !player.isDead()) drawFire(batch);
 
         if (endingTime >= 0f) {
@@ -226,6 +299,51 @@ public class FightPhase implements Phase {
             float x = centerX + MathUtils.sin(i * 2.1f + age * 5f) * (6f + i % 3 * 2f);
             float y = feetY + 8f + age * 55f;
             fill(batch, x, y, 1f, 2f, 1f, 0.45f + age * 0.4f, 0.05f, 1f - age);
+        }
+        batch.setColor(Color.WHITE);
+    }
+
+    private void drawShadowPuddle(SpriteBatch batch) {
+        float radius = 75f;
+        float pulse = 0.5f + 0.5f * MathUtils.sin(time * 5f);
+        // The rim keeps the black pool readable against the arena's black background.
+        for (int y = -10; y <= 10; y += 2) {
+            float halfWidth = (radius + 3f) * (float) Math.sqrt(Math.max(0f, 1f - y * y / 121f));
+            fill(batch, shadowSpawnX - halfWidth, groundY + y, halfWidth * 2f, 2f,
+                0.16f + pulse * 0.05f, 0.07f, 0.24f + pulse * 0.08f, 1f);
+            if (Math.abs(y) <= 8) {
+                halfWidth = radius * (float) Math.sqrt(Math.max(0f, 1f - y * y / 81f));
+                fill(batch, shadowSpawnX - halfWidth, groundY + y, halfWidth * 2f, 2f,
+                    0.005f, 0.002f, 0.012f, 1f);
+            }
+        }
+        batch.setColor(Color.WHITE);
+    }
+
+    private void drawMobEffects(SpriteBatch batch) {
+        for (int i = 0; i < shadowMobs.size; i++) {
+            Mob mob = shadowMobs.get(i);
+            if (mob.isRemoved()) continue;
+            float flash = mob.getHitFlash();
+            if (flash > 0f) {
+                Rectangle body = mob.getBounds();
+                float distance = 8f + (1f - flash) * 15f;
+                for (int spark = 0; spark < 6; spark++) {
+                    float angle = spark * MathUtils.PI2 / 6f;
+                    float x = body.x + body.width / 2f + MathUtils.cos(angle) * distance;
+                    float y = body.y + body.height / 2f + MathUtils.sin(angle) * distance;
+                    fill(batch, x, y, 3f, 2f, 1f, 0.85f, 0.65f, flash);
+                }
+            }
+            if (mob.isDead() || !(mob instanceof Mob2)) continue;
+            Mob2 bomb = (Mob2) mob;
+            Rectangle blast = bomb.getBlastBounds();
+            if (bomb.hasExploded()) {
+                float alpha = 1f - bomb.getBlastTime() / 0.25f;
+                fill(batch, blast.x, blast.y, blast.width, blast.height, 0.65f, 0.25f, 0.85f, alpha * 0.5f);
+            } else if (bomb.isArmed()) {
+                fill(batch, blast.x, groundY, blast.width, 2f, 0.9f, 0.3f, 0.65f, 0.8f);
+            }
         }
         batch.setColor(Color.WHITE);
     }

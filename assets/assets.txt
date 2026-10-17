@@ -115,4 +115,5 @@ sprites/pixil-frame-0 (1).png
 sprites/player_attack.png
 ui elements/Skin06-Question_Exit-Game.png
 ui elements/Skin06-Start-Screen-Menu.png
+ui elements/blood_splatter.png
 ui elements/menu_textonly.png

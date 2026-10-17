@@ -16,12 +16,14 @@ import java.util.Map;
 public class Boss extends Enemy {
     public enum State { IDLE, WALK, ATTACK, CAST, DEATH }
     private enum Action { CHASE, SLASH_WINDUP, SLASH, CAST_WINDUP, CAST, RECOVER,
-        FINISH_WINDUP, FINISH, DONE, DEAD }
+        SINK, HIDDEN, RISE, FINISH_WINDUP, FINISH, DONE, DEAD }
 
     private static final float BODY_WIDTH = 40f;
     private static final float BODY_HEIGHT = 54f;
     private static final float HURTBOX_HEIGHT_SCALE = 0.75f;
     private static final float CONTACT_HEIGHT_SCALE = 0.5f;
+    private static final float CONTACT_WIDTH = 18f;
+    private static final float SHADOW_TRANSITION_TIME = 0.9f;
     private static final float FRAME_WIDTH = 140f;
     private static final float FRAME_HEIGHT = 93f;
     private static final float BODY_PIVOT_X = 106f;
@@ -59,6 +61,8 @@ public class Boss extends Enemy {
     private boolean waveFired;
     private boolean finisherStarted;
     private boolean finisherImpacted;
+    private boolean shadowUsed;
+    private final TextureRegion sinkingFrame = new TextureRegion();
 
     public Boss(float x, float y, float scale, int maxHealth, float arenaLeft, float arenaRight,
                 float finisherHealthFraction, Map<State, Animation<TextureRegion>> animations,
@@ -98,6 +102,14 @@ public class Boss extends Enemy {
         }
 
         switch (action) {
+            case SINK:
+                if (actionTime >= SHADOW_TRANSITION_TIME) begin(Action.HIDDEN, State.IDLE);
+                break;
+            case HIDDEN:
+                break;
+            case RISE:
+                if (actionTime >= SHADOW_TRANSITION_TIME) begin(Action.RECOVER, State.IDLE);
+                break;
             case CHASE:
                 facePlayer();
                 float gap = distanceToPlayer() - width / 2f - player.getBounds().width / 2f;
@@ -163,7 +175,15 @@ public class Boss extends Enemy {
 
     @Override
     public void takeDamage(int amount) {
-        if (amount <= 0 || isDead() || finisherStarted) return;
+        if (amount <= 0 || isDead() || finisherStarted || isInShadowPhase()) return;
+        // Clamp the crossing hit so even a large hit cannot skip the mob interlude.
+        int shadowHealth = maxHealth / 2;
+        if (finisherHealth > 0 && !shadowUsed && health - amount <= shadowHealth) {
+            health = shadowHealth;
+            shadowUsed = true;
+            begin(Action.SINK, State.IDLE);
+            return;
+        }
         // Preserve the scripted ending even if a hit would otherwise kill the boss.
         int applied = finisherHealth > 0 ? Math.min(amount, health - finisherHealth) : amount;
         super.takeDamage(applied);
@@ -193,7 +213,23 @@ public class Boss extends Enemy {
 
     /** Low contact box lets a single jump clear the boss while air attacks can hit its torso. */
     public Rectangle getContactBounds() {
-        return contactBox.set(position.x, position.y, width, height * CONTACT_HEIGHT_SCALE);
+        float contactWidth = CONTACT_WIDTH * scale;
+        return contactBox.set(position.x + (width - contactWidth) / 2f, position.y,
+            contactWidth, height * CONTACT_HEIGHT_SCALE);
+    }
+
+    public boolean isInShadowPhase() {
+        return action == Action.SINK || action == Action.HIDDEN || action == Action.RISE;
+    }
+    public boolean isSubmerged() { return action == Action.HIDDEN; }
+    public void returnFromShadow() {
+        if (isSubmerged()) begin(Action.RISE, State.IDLE);
+    }
+    public float getShadowDepth() {
+        if (action == Action.HIDDEN) return 1f;
+        if (action == Action.SINK) return MathUtils.clamp(actionTime / SHADOW_TRANSITION_TIME, 0f, 1f);
+        if (action == Action.RISE) return 1f - MathUtils.clamp(actionTime / SHADOW_TRANSITION_TIME, 0f, 1f);
+        return 0f;
     }
 
     public Rectangle getAttackBounds() {
@@ -202,6 +238,9 @@ public class Boss extends Enemy {
     }
 
     public String getTelegraph() {
+        if (action == Action.SINK) return "THE MONSTER SINKS INTO SHADOW";
+        if (action == Action.HIDDEN) return "CLEAR THE SHADOWS - DASH TO SHAKE OFF LEECHES";
+        if (action == Action.RISE) return "THE MONSTER RETURNS";
         if (action == Action.SLASH_WINDUP) return "SLASH - JUMP OR BACK AWAY";
         if (action == Action.CAST_WINDUP) return "SHADOW WAVE - JUMP";
         if (action == Action.FINISH_WINDUP) return "SOMETHING IS BREAKING...";
@@ -215,6 +254,7 @@ public class Boss extends Enemy {
 
     @Override
     public void draw(SpriteBatch batch) {
+        if (isSubmerged()) return;
         float visualScale = scale * (action == Action.FINISH ? 1.2f : 1f);
         float drawWidth = FRAME_WIDTH * visualScale;
         float drawHeight = FRAME_HEIGHT * visualScale;
@@ -227,7 +267,16 @@ public class Boss extends Enemy {
             float pulse = 0.65f + 0.35f * MathUtils.sin(actionTime * 18f);
             batch.setColor(1f, pulse, pulse, 1f);
         }
-        batch.draw(anim.getCurrentFrame(), facingRight ? x + drawWidth : x, position.y,
+        TextureRegion frame = anim.getCurrentFrame();
+        if (isInShadowPhase()) {
+            int visibleHeight = Math.round(frame.getRegionHeight() * (1f - getShadowDepth()));
+            if (visibleHeight > 0) {
+                sinkingFrame.setRegion(frame);
+                sinkingFrame.setRegionHeight(visibleHeight);
+                batch.draw(sinkingFrame, facingRight ? x + drawWidth : x, position.y,
+                    facingRight ? -drawWidth : drawWidth, visibleHeight * visualScale);
+            }
+        } else batch.draw(frame, facingRight ? x + drawWidth : x, position.y,
             facingRight ? -drawWidth : drawWidth, drawHeight);
         batch.setColor(r, g, b, a);
     }

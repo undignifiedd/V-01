@@ -49,6 +49,7 @@ public class Player extends Entity implements Attackable {
 
     private final AnimationStateMachine<State> anim;
     private final Rectangle attackBox = new Rectangle();
+    private final Rectangle contactBox = new Rectangle();
     private int attackId;
     private final Vector2 moveDirection = new Vector2();
     private final Vector2 dashDirection = new Vector2();
@@ -217,6 +218,11 @@ public class Player extends Entity implements Attackable {
         if (remaining > 0f) dashTimer = Math.max(dashTimer, remaining + 0.01f);
     }
     public boolean isBurning() { return burning; }
+    /** Physical body excludes transparent padding in the 64px animation cells. */
+    public Rectangle getContactBounds() {
+        return contactBox.set(position.x + width * 0.3125f, position.y,
+            width * 0.375f, height * 0.86f);
+    }
     public void setBurning(boolean burning) { this.burning = burning; }
     public void knockBack(float velocity) { knockbackVelocity = velocity; }
 

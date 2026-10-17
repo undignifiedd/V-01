@@ -32,7 +32,7 @@ The original fixed-ground/no-jump fight design was explicitly changed: fights no
 - `Stage.draw()` stays outside the main batch block. `Actor.act()` overrides must call `super.act(delta)`.
 - Use index loops over libGDX `Array`; its default iterator is not nestable.
 - Spawn entities only through `world.spawn(entity)`. Call `entity.remove()` rather than modifying entity arrays directly.
-- Combat overlap/damage decisions belong in `FightPhase`. `Player`, `Boss`, and `Projectile` expose data and update their own state. Existing `Mob` still resolves its own melee hit; revisit that only during the requested mob pass.
+- Combat overlap/damage decisions belong in `FightPhase`. `Player`, `Boss`, `Mob`, `Mob2`, and `Projectile` expose data and update their own state.
 - Phases receive only needed dependencies, never `Main` itself.
 - Prefer lowercase asset names with underscores for new assets. Existing filenames with spaces are already in use; do not rename them without discussion.
 - Crack effect: static sprite overlay plus camera shake, no shader.
@@ -53,7 +53,7 @@ Story order to preserve:
 **Do not reveal the larger twist** that he was the monster and killed his better half; that is outside this jam.
 
 - **Time:** nonlinear inner/real-world phase swaps. Inner world is dark; real world should be lighter.
-- **Shadow:** planned mob summoning from telegraphed shadow puddles. Not implemented yet.
+- **Shadow:** implemented one-time 50%-health mob interlude; boss sinks into a black puddle under its feet, summons smaller mobs, and returns when the wave is cleared.
 - **Fire:** planned rage attack, plus implemented boss-contact burning.
 
 Only the opening boss fight is currently playable. Its temporary end card says the story continues; this does not mean the real-world/exploration/final ending is implemented.
@@ -107,6 +107,8 @@ Only the opening boss fight is currently playable. Its temporary end card says t
 - **Ranged wave:** 0.65 s warning, cast emits once at 0.32 s, 14 damage, speed 180, 56×30 collision size, 4 s lifetime. Uses existing spell art rotated into a low horizontal wave. Spawn goes through `world.spawn()`; phase handles overlap/removal.
 - Normal attack recovery: **0.7 s**. Ranged cooldown: **3.2 s**.
 - Facing locks through attack windup/action, so crossing to the other side can evade a swing.
+- At **50% health (120 HP)** the opening boss becomes untargetable and sinks into a black ground puddle over **0.9 s**. The crossing hit clamps at 120 HP so it cannot skip this interlude. Existing boss waves and burning clear on entry.
+- While submerged it summons **two leeches and two bomb mobs**, alternating every **0.8 s** from its puddle. After all four die or finish exploding, it rises over **0.9 s**, recovers, and resumes combat at 120 HP. This happens once per fight; damage, slash and contact fire are disabled during sinking/submersion/rising. Ordinary bosses configured with zero finisher fraction retain their normal death path without this opening-specific interlude.
 - At **25% health (60 HP)**, the one-time story finisher starts. A lethal hit clamps health at this threshold instead of skipping the ending. Further damage is ignored during the finisher.
 - Finisher warning: **1.4 s**; impact occurs 0.4 s into the finishing animation. It clears stray projectiles, flashes/cracks the screen, and shakes the camera. Crack holds for **2.4 s**, then the phase completes.
 - A zero finisher-health fraction supports ordinary death with a death animation before removal, for reuse later.
@@ -118,7 +120,8 @@ Only the opening boss fight is currently playable. Its temporary end card says t
 Draw size is unchanged; collision boxes are deliberately smaller:
 
 - `getBounds()` is the attackable hurtbox: **75%** of the original body height, grounded.
-- `getContactBounds()` is the contact-fire box: **50%** of original body height, grounded.
+- `getContactBounds()` is the contact-fire box: **18 source pixels wide** (46.8 world units at scale 2.6), centered on the torso, and **50%** of original body height, grounded. It no longer spans the full 104-unit hurtbox width.
+- Fire ignition tests this against the player's physical contact bounds (**24×55.04** at normal scale), excluding transparent sides of the 64×64 player sprite. Player melee and other existing hurtboxes are unchanged.
 - A well-timed single jump can clear contact fire while aerial attacks can still connect with the torso. Descending into the lower body still ignites the player.
 - Dash crossing and contact pushback use the contact box. Player melee targets the hurtbox.
 - Do not enlarge these back to the full sprite bounds or silently extend the boss's slash hitbox.
@@ -147,7 +150,7 @@ core/src/main/java/com/Version_1/
   Phases/Phase.java, FightPhase.java, ExplorePhase.java, RealWorldPhase.java
 ```
 
-`NPC`, `ExplorePhase`, `RealWorldPhase`, and `Mob2` are currently placeholders. `DialogueBox` is planned, not implemented.
+`NPC`, `ExplorePhase`, and `RealWorldPhase` are currently placeholders. `DialogueBox` is planned, not implemented. `Mob` and `Mob2` are wired into the opening's shadow interlude.
 
 ### Ownership
 
@@ -249,13 +252,15 @@ Current code only has a rage float/max and clamped `addRage`; damage does not fi
 
 **L** is reserved for a block/parry mechanic. It is not implemented. Decide parry window/recovery, whether holding L blocks afterward, damage reduction, and enemy stun/counterattack behavior. Do not silently pick these rules.
 
-### Mobs and summoning
+### Mobs and summoning (implemented 18 October)
 
-- Mob1 chases and melees. An older parameterized `Mob` implementation exists, but is not integrated in the playable fight and still handles collision locally.
-- The developer explicitly deferred Mob changes and all shadow summoning during this boss pass.
-- `Mob2.java` was added by the developer as a placeholder; they will explain it in the next chat. Do not invent its behavior.
-- If variants only differ by stats/sprite, prefer parameters in one Mob class unless the developer specifies otherwise.
-- Plan readable shadow-puddle warnings before summons and staggered mob attacks so crowds remain manageable. These were design suggestions, not implemented behavior.
+- `Mob` uses **`assets/evileye_shadow/waechter-20 Charset.png`**. It flies toward the player at 82 units/s, latches on physical contact, and drains **4 HP every 0.8 s**, subject to normal player immunity. **Dash shakes it off**, drops it back to ground level, and prevents relatching for **1 s**. It can chase and attach again afterward.
+- `Mob2 extends Mob` to reuse flying movement and rendering. It uses **`assets/eye_shadow/waechter-19.png`**, stops when the player enters its blast bounds, flashes for **0.7 s**, then explodes once for **16 damage** within a **92×92** box centered on itself. Escape or dash avoids the blast; killing it during the fuse cancels it. Blast visual holds **0.25 s**, then removes the mob.
+- Punches now give both mobs a **0.18 s stagger**, outward recoil starting at **160 units/s** with drag, red hit tint, squash/stretch and bright impact sparks. Stagger prevents new latches and briefly pauses an armed bomb's fuse before it resumes. Lethal punches show a **0.25 s** shrinking fade rather than instantly disappearing; the boss waits for defeat visuals to finish before returning.
+- The puddle is anchored at the boss's original sinking position and stays visible afterward, with a subtle purple rim for readability on black. All four mobs emerge from its **same center point** over **0.4 s**, alternating slight left/right spreading before pursuit. No latch or bomb arming during emergence. The wave remains finite: **four total, no replacements**, as explicitly confirmed by the developer.
+- Both have **20 HP**, a **30×32** draw/body size, and remain much smaller than the boss (and smaller than the player). Main owns both textures, crops three right-facing frames from charset row 2, builds shared looping animations, and disposes textures.
+- FightPhase resolves attachment, drain and blast collisions/damage, owns the four-mob wave, draws the puddle and blast warnings, and resumes the boss only after the wave clears. No new textures or physics dependencies were added.
+- The old unused melee Mob constructor/state machine was replaced for this requested leech behavior. FightPhase's constructor now also receives the two shared mob animations. Locked Entity/Attackable/Phase/World contracts are unchanged.
 
 ## 9. Scope and build order
 
@@ -280,8 +285,8 @@ The end card after the opening is temporary. Real-world scenes, NPC dialogue/exp
 - [x] Unified boss atlas and slower background eye
 - [x] FightPhase wired into Main, health bars, warnings, R retry/replay
 - [x] Screen crack and camera shake for opening
-- [ ] Mob review/integration; developer explanation of Mob2
-- [ ] Shadow summoning
+- [x] Mob leech/drain/dash detachment and Mob2 fuse/explosion with supplied assets
+- [x] 50%-health shadow puddle, boss sink/return and four-mob interlude
 - [ ] Shared persistent state
 - [ ] Rage fill, K wave, rage UI
 - [ ] L block/parry
@@ -296,7 +301,7 @@ The end card after the opening is temporary. Real-world scenes, NPC dialogue/exp
 
 Ask before implementing ambiguous behavior, particularly:
 
-- Mob2 design and how it differs from Mob1.
+- Playtest mob count, health, drain cadence and bomb fuse/radius; current defaults are documented above.
 - Rage conversion and wave tuning/assets/reset rules.
 - Block versus parry semantics, timing, and counters.
 - Shared game-state class name/data and persistence rules.
@@ -308,11 +313,12 @@ Ask before implementing ambiguous behavior, particularly:
 As of this handoff:
 
 - Core and desktop Java sources compile against cached dependencies with `javac --release 11`.
+- Latest shadow pass: core/desktop compilation, `build/ShadowFightCheck.java`, and existing `PlayerJumpCheck.java` passed. Coverage includes physical-only fire/expiry, 50% damage clamp, sink timing, projectile clearing, exact four-mob wave, clear/return/one-time trigger, 25% finisher completion, leech drain/dash detachment, bomb fuse/single blast/escape/kill cancellation, and existing jump/attack/dash movement. The follow-up `MobFeedbackCheck.java` covers punch recoil/stagger, fatal fade, armed-bomb feedback and fixed-point emergence. Hidden LWJGL `MobRenderCheck.java` passed actual melee-hit checks and captured sinking, emergence, wave, punch, defeat and return; the emergence/punch/return PNGs were visually inspected. Manual gameplay tuning is still useful.
 - Local checks cover jump stages/height, double-jump limits, coyote/buffer behavior, attack movement, air attacks/gravity, reach in both directions, dash cancellation/immunity/cooldown/crossing, boss/projectile damage, contact fire/expiry/pushback/walls, reduced collision boxes, finisher threshold and camera reset.
 - Previous hidden LWJGL render checks verified boss size/facing, warnings/slash/wave, jump, crack, burn/embers, dash trail, end card, and both retry flows. The most recent air-attack/bounds/reach changes passed compilation and behavior checks; continue playtesting the feel.
 - Ignored `build/` contains temporary Java check harnesses, a cached runtime classpath file, atlas helper, and preview PNGs if still present. Do not stage these or add test dependencies merely to retain them.
 - The Gradle wrapper can need permission to access the user's external Gradle cache. Java is installed under `C:\Program Files\Java\jdk-24`; source target remains Java 11. Do not modify build settings simply to work around environment access.
 - `assets/assets.txt` is generated by Gradle's `generateAssetList`. Earlier stash conflicts left markers in it; those were removed. Do not treat it as hand-authored gameplay data. Do not change tracking/ignore rules unless requested.
-- Gameplay/code changes are currently local and unstaged. `boss_combined.png` and `Mob2.java` are currently untracked. Recheck `git status` before acting; the developer may change files between chats.
+- Gameplay/code changes are currently local and unstaged. `boss_combined.png` and `Mob2.java` are now tracked. `assets/assets.txt` already had a local edit before this shadow pass and was left untouched. Recheck `git status` before acting; the developer may change files between chats.
 - Older backup stashes named **Local changes v2** and **Local stuff before pull** remain. They are older snapshots, not replacements for the latest working files. Do not apply/pop/drop them without instruction.
 - No final push has been performed by the assistant. The developer must review and explicitly authorize staging/commits/pushes.

@@ -51,6 +51,10 @@ public class Main extends GameEngineBase {
     private Texture playerSheet;
     private Texture jumpSheet;
     private Texture bossSheet;
+    private Texture mobSheet;
+    private Texture mob2Sheet;
+    private Animation<TextureRegion> mobAnimation;
+    private Animation<TextureRegion> mob2Animation;
     private BitmapFont font;
     private Map<Player.State, Animation<TextureRegion>> playerAnimations;
     private Map<Boss.State, Animation<TextureRegion>> bossAnimations;
@@ -70,6 +74,8 @@ public class Main extends GameEngineBase {
         playerSheet = loadTexture(PLAYER_SHEET);
         jumpSheet = loadTexture(JUMP_SHEET);
         bossSheet = loadTexture(BOSS_SHEET);
+        mobSheet = loadTexture("evileye_shadow/waechter-20 Charset.png");
+        mob2Sheet = loadTexture("eye_shadow/waechter-19.png");
         buildAnimations();
         currentPhase = buildPhase(phaseIndex);
     }
@@ -112,6 +118,15 @@ public class Main extends GameEngineBase {
         backgroundAnimation = buildAnimation(eyes, 0, eyes.length, BACKGROUND_FRAME_TIME, Animation.PlayMode.LOOP_PINGPONG);
         crack = new TextureRegion(bossSheet, 0, 907, 640, 360);
         pixel = new TextureRegion(bossSheet, 2239, 1279, 1, 1);
+        // Charset cells: 96x96 and 48x48; row 2 faces right in both sheets.
+        TextureRegion[] leeches = new TextureRegion[3];
+        TextureRegion[] bombs = new TextureRegion[3];
+        for (int i = 0; i < 3; i++) {
+            leeches[i] = new TextureRegion(mobSheet, i * 96 + 8, 192 + 8, 80, 80);
+            bombs[i] = new TextureRegion(mob2Sheet, i * 48, 96, 48, 48);
+        }
+        mobAnimation = buildAnimation(leeches, 0, 3, 0.16f, Animation.PlayMode.LOOP_PINGPONG);
+        mob2Animation = buildAnimation(bombs, 0, 3, 0.13f, Animation.PlayMode.LOOP_PINGPONG);
     }
 
     private Animation<TextureRegion> bossAnimation(int row, int count, float frameTime, Animation.PlayMode mode) {
@@ -140,7 +155,7 @@ public class Main extends GameEngineBase {
                     bossMargin, VIEW_W - bossMargin, FINISHER_HEALTH_FRACTION,
                     bossAnimations, waveAnimation, player, world);
                 return new FightPhase(world, player, boss, camera, font, backgroundAnimation,
-                    crack, pixel, VIEW_W, VIEW_H);
+                    crack, pixel, VIEW_W, VIEW_H, mobAnimation, mob2Animation);
             default:
                 return null; // Further story phases are not implemented yet.
         }
@@ -201,6 +216,8 @@ public class Main extends GameEngineBase {
         playerSheet.dispose();
         jumpSheet.dispose();
         bossSheet.dispose();
+        mobSheet.dispose();
+        mob2Sheet.dispose();
         super.dispose();
     }
 
