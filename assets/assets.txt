@@ -100,9 +100,18 @@ bossfight_background/eye_blink_spritesheet_preview_1024.png
 evileye_shadow/waechter-20 Charset.png
 eye_shadow/waechter-19.png
 forest_tilesheet/free.png
+health and rage/healthbar.png
+health and rage/ragemeter.png
 libgdx.png
+netanyahu/bro.jpg
 notebook.jpg
+sfx/1. Behind the Curtains.wav
+sfx/2. Moonless Night.wav
 sprites/combined_spritesheet.png
 sprites/girl_jump_spritesheet_4x48x80.png
+sprites/girl_stop_block_spritesheet_3x48x64.png
 sprites/pixil-frame-0 (1).png
 sprites/player_attack.png
+ui elements/Skin06-Question_Exit-Game.png
+ui elements/Skin06-Start-Screen-Menu.png
+ui elements/blood_splatter.png
