@@ -1,13 +1,3 @@
-big_boss/Attack/Bringer-of-Death_Attack_1.png
-big_boss/Attack/Bringer-of-Death_Attack_10.png
-big_boss/Attack/Bringer-of-Death_Attack_2.png
-big_boss/Attack/Bringer-of-Death_Attack_3.png
-big_boss/Attack/Bringer-of-Death_Attack_4.png
-big_boss/Attack/Bringer-of-Death_Attack_5.png
-big_boss/Attack/Bringer-of-Death_Attack_6.png
-big_boss/Attack/Bringer-of-Death_Attack_7.png
-big_boss/Attack/Bringer-of-Death_Attack_8.png
-big_boss/Attack/Bringer-of-Death_Attack_9.png
 big_boss/Cast/Bringer-of-Death_Cast_1.png
 big_boss/Cast/Bringer-of-Death_Cast_2.png
 big_boss/Cast/Bringer-of-Death_Cast_3.png
@@ -30,14 +20,6 @@ big_boss/Death/Bringer-of-Death_Death_9.png
 big_boss/Hurt/Bringer-of-Death_Hurt_1.png
 big_boss/Hurt/Bringer-of-Death_Hurt_2.png
 big_boss/Hurt/Bringer-of-Death_Hurt_3.png
-big_boss/Idle/Bringer-of-Death_Idle_1.png
-big_boss/Idle/Bringer-of-Death_Idle_2.png
-big_boss/Idle/Bringer-of-Death_Idle_3.png
-big_boss/Idle/Bringer-of-Death_Idle_4.png
-big_boss/Idle/Bringer-of-Death_Idle_5.png
-big_boss/Idle/Bringer-of-Death_Idle_6.png
-big_boss/Idle/Bringer-of-Death_Idle_7.png
-big_boss/Idle/Bringer-of-Death_Idle_8.png
 big_boss/No Effect Sprites/Attack/Bringer-of-Death_Attack_1.png
 big_boss/No Effect Sprites/Attack/Bringer-of-Death_Attack_10.png
 big_boss/No Effect Sprites/Attack/Bringer-of-Death_Attack_2.png
@@ -110,11 +92,17 @@ big_boss/Walk/Bringer-of-Death_Walk_5.png
 big_boss/Walk/Bringer-of-Death_Walk_6.png
 big_boss/Walk/Bringer-of-Death_Walk_7.png
 big_boss/Walk/Bringer-of-Death_Walk_8.png
+big_boss/attack.png
+big_boss/idle.png
+big_boss/walk.png
 bossfight_background/eye_blink_512.gif
 bossfight_background/eye_blink_spritesheet_preview_1024.png
 evileye_shadow/waechter-20 Charset.png
 eye_shadow/waechter-19.png
 forest_tilesheet/free.png
 libgdx.png
+notebook.jpg
+sprites/combined_spritesheet.png
+sprites/girl_jump_spritesheet_4x48x80.png
 sprites/pixil-frame-0 (1).png
 sprites/player_attack.png
