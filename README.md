@@ -1,8 +1,36 @@
-# Version_1
+# The Other Half
 
-A [libGDX](https://libgdx.com/) project generated with [gdx-liftoff](https://github.com/libgdx/gdx-liftoff).
+A 2D pixel-art narrative action game about a man and his inner monster, created for a game jam around **Time, Fire, and Shadow**. Fight, explore, and discover what waits on the other side.
 
-This project was generated with a template including simple application launchers and an `ApplicationAdapter` extension that draws libGDX logo.
+## Play the game — judges and players
+
+**[Download The Other Half for Windows (64-bit)](https://github.com/undignifiedd/V-01/releases/download/v1.0.0-jam/TheOtherHalf-Windows-x64.zip)**
+
+1. Download the ZIP from the link above or the [release page](https://github.com/undignifiedd/V-01/releases/tag/v1.0.0-jam).
+2. Extract the entire ZIP.
+3. Open the extracted `TheOtherHalf` folder and double-click **TheOtherHalf.exe**.
+
+Java is bundled; no separate Java installation is needed. Keep the `app` and `runtime` folders beside the EXE, and run the game from the extracted folder.
+
+Choose **Start** from the main menu to begin at the opening boss fight. This build includes both boss fights, the exploration and flower quest, boss-fight music, and the final "To be continued..." ending.
+
+## Controls
+
+| Key | Action |
+| --- | --- |
+| A / D | Move left / right |
+| W | Jump and double jump in combat; move up while exploring |
+| S | Move down while exploring |
+| J | Melee attack, including in the air |
+| Space | Dash |
+| K | Special attack when the rage meter is full |
+| E | Interact and advance dialogue |
+| Enter | Advance dialogue |
+| Y / N | Accept / decline the flower request |
+
+## Build from source
+
+Built with Java and [libGDX](https://libgdx.com/), starting from [gdx-liftoff](https://github.com/libgdx/gdx-liftoff).
 
 ## Platforms
 

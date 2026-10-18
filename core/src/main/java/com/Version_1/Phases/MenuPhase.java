@@ -10,9 +10,15 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
-/** Title menu. Shared artwork/font belong to Main; input uses the game's fitted viewport. */
+/**
+ * Title menu. Shared artwork/font belong to Main; input uses the game's fitted
+ * viewport.
+ */
 public class MenuPhase implements Phase {
-    private enum Panel { MAIN, CREDITS, EXIT }
+    private enum Panel {
+        MAIN, CREDITS, EXIT
+    }
+
     private final TextureRegion background, exitQuestion, pixel;
     private final TextureRegion[] labels;
     private final BitmapFont font;
@@ -30,14 +36,15 @@ public class MenuPhase implements Phase {
     private float time;
 
     public MenuPhase(TextureRegion background, TextureRegion[] labels, TextureRegion exitQuestion,
-                     TextureRegion pixel, BitmapFont font, Viewport viewport) {
+            TextureRegion pixel, BitmapFont font, Viewport viewport) {
         this.background = background;
         this.labels = labels;
         this.exitQuestion = exitQuestion;
         this.pixel = pixel;
         this.font = font;
         this.viewport = viewport;
-        for (int i = 0; i < choices.length; i++) choices[i] = new Rectangle(60f, 209f - i * 48f, 300f, 38f);
+        for (int i = 0; i < choices.length; i++)
+            choices[i] = new Rectangle(60f, 209f - i * 48f, 300f, 38f);
     }
 
     @Override
@@ -52,26 +59,47 @@ public class MenuPhase implements Phase {
         boolean enter = Gdx.input.isKeyJustPressed(Input.Keys.ENTER);
         boolean escape = Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE);
         if (panel == Panel.MAIN) {
-            if (key(Input.Keys.UP, Input.Keys.W)) selected = (selected + choices.length - 1) % choices.length;
-            if (key(Input.Keys.DOWN, Input.Keys.S)) selected = (selected + 1) % choices.length;
+            if (key(Input.Keys.UP, Input.Keys.W))
+                selected = (selected + choices.length - 1) % choices.length;
+            if (key(Input.Keys.DOWN, Input.Keys.S))
+                selected = (selected + 1) % choices.length;
             for (int i = 0; i < choices.length; i++) {
-                if (choices[i].contains(mouse) && (moved || click)) selected = i;
-                if (click && choices[i].contains(mouse)) { activate(); return; }
+                if (choices[i].contains(mouse) && (moved || click))
+                    selected = i;
+                if (click && choices[i].contains(mouse)) {
+                    activate();
+                    return;
+                }
             }
-            if (escape) { panel = Panel.EXIT; exitYes = false; }
-            else if (enter) activate();
+            if (escape) {
+                panel = Panel.EXIT;
+                exitYes = false;
+            } else if (enter)
+                activate();
         } else if (panel == Panel.EXIT) {
-            if (escape || Gdx.input.isKeyJustPressed(Input.Keys.N)) { panel = Panel.MAIN; return; }
-            if (key(Input.Keys.LEFT, Input.Keys.A)) exitYes = true;
-            if (key(Input.Keys.RIGHT, Input.Keys.D)) exitYes = false;
-            if (moved) {
-                if (yes.contains(mouse)) exitYes = true;
-                else if (no.contains(mouse)) exitYes = false;
+            if (escape || Gdx.input.isKeyJustPressed(Input.Keys.N)) {
+                panel = Panel.MAIN;
+                return;
             }
-            if (Gdx.input.isKeyJustPressed(Input.Keys.Y) || (click && yes.contains(mouse)) || (enter && exitYes)) Gdx.app.exit();
-            else if ((click && no.contains(mouse)) || (enter && !exitYes)) panel = Panel.MAIN;
+            if (key(Input.Keys.LEFT, Input.Keys.A))
+                exitYes = true;
+            if (key(Input.Keys.RIGHT, Input.Keys.D))
+                exitYes = false;
+            if (moved) {
+                if (yes.contains(mouse))
+                    exitYes = true;
+                else if (no.contains(mouse))
+                    exitYes = false;
+            }
+            if (Gdx.input.isKeyJustPressed(Input.Keys.Y) || (click && yes.contains(mouse)) || (enter && exitYes))
+                Gdx.app.exit();
+            else if ((click && no.contains(mouse)) || (enter && !exitYes))
+                panel = Panel.MAIN;
         } else {
-            if (escape || (click && back.contains(mouse))) { panel = Panel.MAIN; return; }
+            if (escape || (click && back.contains(mouse))) {
+                panel = Panel.MAIN;
+                return;
+            }
         }
     }
 
@@ -79,12 +107,19 @@ public class MenuPhase implements Phase {
         return Gdx.input.isKeyJustPressed(first) || Gdx.input.isKeyJustPressed(second);
     }
 
-    public void setRetryAvailable(boolean available) { retryAvailable = available; }
+    public void setRetryAvailable(boolean available) {
+        retryAvailable = available;
+    }
 
     private void activate() {
-        if (selected == 0) finished = true;
-        else if (selected == 1) panel = Panel.CREDITS;
-        else { panel = Panel.EXIT; exitYes = false; }
+        if (selected == 0)
+            finished = true;
+        else if (selected == 1)
+            panel = Panel.CREDITS;
+        else {
+            panel = Panel.EXIT;
+            exitYes = false;
+        }
     }
 
     @Override
@@ -160,6 +195,12 @@ public class MenuPhase implements Phase {
         batch.draw(pixel, x, y, w, h);
     }
 
-    @Override public boolean isFinished() { return finished; }
-    @Override public void dispose() { /* Shared assets belong to Main. */ }
+    @Override
+    public boolean isFinished() {
+        return finished;
+    }
+
+    @Override
+    public void dispose() {
+        /* Shared assets belong to Main. */ }
 }

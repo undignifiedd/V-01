@@ -56,7 +56,7 @@ Story order to preserve:
 - **Shadow:** implemented one-time 50%-health mob interlude; boss sinks into a black puddle under its feet, summons smaller mobs, and returns when the wave is cleared.
 - **Fire:** rage meter, travelling rage wave/edge explosion, and boss-contact burning.
 
-Playable flow is now opening boss fight → crack → diary room → empty passage ↔ three-NPC flower quest → staged candle/grin reveal and arena glimpses → diary exposition → boss + mob fight → shields/airborne twirl → flower room. NPC and both diary entries are authored; the flower-room accusation remains a clearly marked draft. Further ending behavior after reading the flowers is not defined yet.
+Playable flow is now opening boss fight → crack → diary room → empty passage ↔ three-NPC flower quest → staged candle/grin reveal and arena glimpses → diary exposition → boss + mob fight → shields/airborne twirl → flower room → "To be continued..." end card → main menu. NPC and both diary entries are authored; the flower-room accusation remains a clearly marked draft. Completing all dialogue pages on any flower freezes movement and fades to black over 1.2 seconds, then fades in the ending text over 0.8 seconds. At 3.5 seconds, fresh E/Enter input can return to the menu with the fight retry cleared.
 
 ## 4. Current player mechanics
 
@@ -295,8 +295,9 @@ Other supplied assets are available under `assets/health and rage/`, `assets/sfx
 ### Scene music (implemented 18 October)
 
 - Main streams **`sfx/2. Moonless Night.wav`** in both real-world diary visits and **`sfx/1. Behind the Curtains.wav`** in the NPC room, including ordinary dialogue and the flower quest before the reveal. Both loop at **50% volume**.
-- NPC music stops immediately when Bob interaction enters REVEAL, before the first cutscene blink. Passage, cutscene, fights and flower room have no assigned music. Leaving/re-entering the NPC room stops/restarts its track. Diary music returns on the second visit and normal test restart.
+- NPC music stops immediately when Bob interaction enters REVEAL, before the first cutscene blink. Both boss fights loop `sfx/combat/bossfight/bielbeats-phunky-boss-fight-458803.mp3` at 50% volume, stopping on phase exit. Passage, cutscene and flower room have no assigned music. Leaving/re-entering the NPC room stops/restarts its track. Diary music returns on the second visit and normal test restart.
 - Shared `Music` instances load once in Main and dispose once. Selection changes only when the requested track changes, avoiding per-frame restarts. No fade was added; the requested cutscene cutoff is abrupt.
+- Boss-music follow-up: core/desktop compilation and hidden `BossMusicCheck` passed track existence, 50% volume/looping, playback in both fights without per-frame restarts, stopping on diary/flower-room transitions and disposal exactly once. Playback routing was mocked/muted; audible balance remains a playtest check. This supersedes the earlier fight-silence expectation below.
 - Core/desktop compilation and hidden `MusicRouteCheck` passed valid WAV files, both looping tracks, stable playback routing, room re-entry, immediate cutscene cutoff, second diary, fight silence, retry and disposal. Routing was tested with mocked/muted playback; audible mixing still needs a playthrough.
 
 ### Rage (implemented 18 October)
@@ -385,6 +386,10 @@ Ask before implementing ambiguous behavior, particularly:
 ## 12. Validation and local repository handoff
 
 As of this handoff:
+
+- Windows release: `build/releases/TheOtherHalf-Windows-x64.zip` contains the portable `TheOtherHalf.exe`, game/assets and bundled Java runtime (about 62.3 MB compressed). Extract the whole folder before running. `START_PHASE` is reset to 0 so Start begins at the opening fight. Local `build/package-windows.ps1` packages using the installed JDK and cached dependencies; includes both assets and desktop resources. Corrected EXE stayed running/responding in a 10-second hidden launch test with no startup exception; ZIP CRC validation passed. No installer is required.
+
+- Flower ending: core/desktop compilation and hidden `FlowerEndingCheck` passed waiting for flower dialogue completion, multi-page reading, preventing the closing input/early presses from skipping the end card, frozen movement, fresh-input return to main menu and cleared fight retry. Rendered end card was visually inspected.
 
 - Rage carry/fire follow-up: core/desktop compilation and updated `RageCheck` passed melee gain once per swing, protected-target exclusion, delayed explosion damage, multiple carried targets/boss, both directions and arena bounds, paused bomb fuse, release on cancellation/blast, no self-refill, and preserved shadow/shield thresholds. Existing movement and `MobFeedbackCheck`/`ShadowFightCheck` passed. Hidden `RageRenderCheck` captured and visually verified warm flame-tip meter/ready embers, doubled placeholder wave with rim fire, carried boss and edge explosion. This supersedes the original instant-damage/smaller-wave rage behavior below.
 

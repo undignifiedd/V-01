@@ -55,7 +55,7 @@ public class Main extends GameEngineBase {
     private static final int BOSS_HEALTH = 240;
     private static final float FINISHER_HEALTH_FRACTION = 0.25f;
     // Full story starts at the opening boss fight; 1 skips to the diary for testing.
-    private static final int START_PHASE = 3;
+    private static final int START_PHASE = 0;
     private static final float INNER_ROOM_W = VIEW_W;
     private static final float INNER_ROOM_H = VIEW_H;
 
@@ -71,7 +71,7 @@ public class Main extends GameEngineBase {
     private Texture rageWaveTexture;
     private Texture rageMeterTexture;
     private Texture menuSheet, exitMenuSheet;
-    private Music diaryMusic, npcMusic, activeMusic;
+    private Music diaryMusic, npcMusic, bossMusic, activeMusic;
     private Sound punchHit1, punchHit2, heavyHit, rageLaunch, rageExplosion, shieldImpact;
     private Texture mobSheet;
     private Texture mob2Sheet;
@@ -111,10 +111,13 @@ public class Main extends GameEngineBase {
         font = new BitmapFont();
         diaryMusic = Gdx.audio.newMusic(Gdx.files.internal("sfx/2. Moonless Night.wav"));
         npcMusic = Gdx.audio.newMusic(Gdx.files.internal("sfx/1. Behind the Curtains.wav"));
+        bossMusic = Gdx.audio.newMusic(Gdx.files.internal("sfx/combat/bossfight/bielbeats-phunky-boss-fight-458803.mp3"));
         diaryMusic.setLooping(true);
         npcMusic.setLooping(true);
+        bossMusic.setLooping(true);
         diaryMusic.setVolume(0.5f);
         npcMusic.setVolume(0.5f);
+        bossMusic.setVolume(0.5f);
         punchHit1 = Gdx.audio.newSound(Gdx.files.internal("sfx/combat/punch_hit_01.ogg"));
         punchHit2 = Gdx.audio.newSound(Gdx.files.internal("sfx/combat/punch_hit_02.ogg"));
         heavyHit = Gdx.audio.newSound(Gdx.files.internal("sfx/combat/heavy_hit.ogg"));
@@ -359,7 +362,8 @@ public class Main extends GameEngineBase {
 
     private void updateSceneMusic() {
         Music wanted = null;
-        if (currentPhase instanceof RealWorldPhase) wanted = diaryMusic;
+        if (currentPhase instanceof FightPhase) wanted = bossMusic;
+        else if (currentPhase instanceof RealWorldPhase) wanted = diaryMusic;
         else if (currentPhase instanceof FlowerQuestPhase) {
             FlowerQuestPhase.QuestState state = ((FlowerQuestPhase) currentPhase).getQuestState();
             if (state == FlowerQuestPhase.QuestState.NOT_ACCEPTED
@@ -391,6 +395,11 @@ public class Main extends GameEngineBase {
                     npcPhase = null;
                     dialogue = new DialogueBox(font, pixel, VIEW_W);
                     currentPhase = buildPhase(phaseIndex);
+                } else if (currentPhase instanceof FlowerRoomPhase) {
+                    currentPhase.dispose();
+                    retryPhase = -1;
+                    resetCamera();
+                    currentPhase = buildMenu();
                 } else if (currentPhase instanceof DeathDiaryPhase) {
                     currentPhase.dispose();
                     resetCamera();
@@ -430,6 +439,7 @@ public class Main extends GameEngineBase {
         if (activeMusic != null) activeMusic.stop();
         diaryMusic.dispose();
         npcMusic.dispose();
+        bossMusic.dispose();
         if (currentPhase != null) currentPhase.dispose();
         punchHit1.dispose();
         punchHit2.dispose();
