@@ -37,7 +37,7 @@ public class Boss extends Enemy {
     private static final float CAST_FIRE_TIME = 0.32f;
     private static final float RECOVERY_TIME = 0.7f;
     private static final float RANGED_COOLDOWN = 3.2f;
-    private static final float FINISH_WINDUP = 1.4f;
+    private static final float FINISH_WINDUP = 2.8f;
     private static final float FINISH_IMPACT_TIME = 0.4f;
     private static final int SLASH_DAMAGE = 18;
     private static final int WAVE_DAMAGE = 14;
@@ -63,11 +63,21 @@ public class Boss extends Enemy {
     private boolean finisherImpacted;
     private boolean shadowUsed;
     private final TextureRegion sinkingFrame = new TextureRegion();
+    private final float difficulty;
 
     public Boss(float x, float y, float scale, int maxHealth, float arenaLeft, float arenaRight,
                 float finisherHealthFraction, Map<State, Animation<TextureRegion>> animations,
                 Animation<TextureRegion> waveAnimation, Player player, World world) {
+        this(x, y, scale, maxHealth, arenaLeft, arenaRight, finisherHealthFraction,
+            animations, waveAnimation, player, world, 1f);
+    }
+
+    public Boss(float x, float y, float scale, int maxHealth, float arenaLeft, float arenaRight,
+                float finisherHealthFraction, Map<State, Animation<TextureRegion>> animations,
+                Animation<TextureRegion> waveAnimation, Player player, World world, float difficulty) {
         super(x, y, BODY_WIDTH * scale, BODY_HEIGHT * scale, maxHealth, player, world);
+        if (!Float.isFinite(difficulty) || difficulty <= 0f) throw new IllegalArgumentException("Invalid difficulty");
+        this.difficulty = difficulty;
         if (scale <= 0f || arenaRight - arenaLeft < width) {
             throw new IllegalArgumentException("Invalid boss scale or arena width");
         }
@@ -86,9 +96,12 @@ public class Boss extends Enemy {
 
     @Override
     public void update(float delta) {
+        if (isRageCarried()) return;
+        float realDelta = delta;
+        if (!isInShadowPhase() && !finisherStarted && action != Action.DEAD) delta *= difficulty;
         anim.update(delta);
         actionTime += delta;
-        damageFlash = Math.max(0f, damageFlash - delta);
+        damageFlash = Math.max(0f, damageFlash - realDelta);
         rangedCooldown = Math.max(0f, rangedCooldown - delta);
         if (action == Action.DEAD) {
             if (anim.isAnimationFinished()) remove();
@@ -146,7 +159,8 @@ public class Boss extends Enemy {
                     waveFired = true;
                     float x = facingRight ? position.x + width : position.x - WAVE_WIDTH;
                     world.spawn(new Projectile(x, position.y + 8f, WAVE_WIDTH, WAVE_HEIGHT,
-                        facingRight ? WAVE_SPEED : -WAVE_SPEED, WAVE_DAMAGE, 4f, waveAnimation, this));
+                        (facingRight ? WAVE_SPEED : -WAVE_SPEED) * difficulty,
+                        Math.round(WAVE_DAMAGE * difficulty), 4f, waveAnimation, this));
                     rangedCooldown = RANGED_COOLDOWN;
                 }
                 if (anim.isAnimationFinished()) begin(Action.RECOVER, State.IDLE);
@@ -174,11 +188,16 @@ public class Boss extends Enemy {
     }
 
     @Override
+    protected void onRageReleased() {
+        if (!isDead() && !isFinishing() && !isInShadowPhase()) begin(Action.RECOVER, State.IDLE);
+    }
+
+    @Override
     public void takeDamage(int amount) {
         if (amount <= 0 || isDead() || finisherStarted || isInShadowPhase()) return;
         // Clamp the crossing hit so even a large hit cannot skip the mob interlude.
         int shadowHealth = maxHealth / 2;
-        if (finisherHealth > 0 && !shadowUsed && health - amount <= shadowHealth) {
+        if (finisherHealth > 0 && finisherHealth < shadowHealth && !shadowUsed && health - amount <= shadowHealth) {
             health = shadowHealth;
             shadowUsed = true;
             begin(Action.SINK, State.IDLE);
@@ -250,7 +269,8 @@ public class Boss extends Enemy {
     public boolean isFinishing() { return finisherStarted; }
     public boolean hasFinisherImpacted() { return finisherImpacted; }
     public int getAttackId() { return attackId; }
-    public int getAttackDamage() { return SLASH_DAMAGE; }
+    public int getAttackDamage() { return Math.round(SLASH_DAMAGE * difficulty); }
+    public float getDifficulty() { return difficulty; }
 
     @Override
     public void draw(SpriteBatch batch) {
@@ -264,7 +284,7 @@ public class Boss extends Enemy {
         float r = old.r, g = old.g, b = old.b, a = old.a;
         if (damageFlash > 0f) batch.setColor(1f, 0.55f, 0.55f, 1f);
         else if (!getTelegraph().isEmpty()) {
-            float pulse = 0.65f + 0.35f * MathUtils.sin(actionTime * 18f);
+            float pulse = 0.65f + 0.35f * MathUtils.sin(actionTime * (finisherStarted ? 2f : 18f));
             batch.setColor(1f, pulse, pulse, 1f);
         }
         TextureRegion frame = anim.getCurrentFrame();

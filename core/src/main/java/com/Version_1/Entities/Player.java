@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Matrix4;
 
 import java.util.Map;
 
@@ -53,9 +54,11 @@ public class Player extends Entity implements Attackable {
     private int attackId;
     private final Vector2 moveDirection = new Vector2();
     private final Vector2 dashDirection = new Vector2();
+    private final Matrix4 savedTransform = new Matrix4();
+    private final Matrix4 spinTransform = new Matrix4();
 
     private int health = MAX_HEALTH;
-    private float rage = 0f;                            // rules for filling/using it: TBD
+    private float rage = 0f;
     private float invulnTimer = 0f;
     private float idleTurnTimer = 0f;
     private boolean facingRight = true;                 // which way the player currently faces in the game
@@ -218,6 +221,18 @@ public class Player extends Entity implements Attackable {
         if (remaining > 0f) dashTimer = Math.max(dashTimer, remaining + 0.01f);
     }
     public boolean isBurning() { return burning; }
+    /** Stop a cutscene/dialogue from retaining a dash, swing or buffered attack. */
+    public void stopMovement() {
+        attacking = false;
+        attackBufferTimer = 0f;
+        moveDirection.setZero();
+        resetMovement();
+    }
+    public void startCinematic() {
+        stopMovement();
+        invulnTimer = 0f;
+        burning = false;
+    }
     /** Physical body excludes transparent padding in the 64px animation cells. */
     public Rectangle getContactBounds() {
         return contactBox.set(position.x + width * 0.3125f, position.y,
@@ -281,6 +296,18 @@ public class Player extends Entity implements Attackable {
 
     public int getAttackId() { return attackId; }
     public int getAttackDamage() { return ATTACK_DAMAGE; }
+    public TextureRegion getCurrentFrame() { return anim.getCurrentFrame(); }
+    /** Scripted launch rendering; the owning phase supplies trajectory and angle. */
+    public void drawSpinning(SpriteBatch batch, float degrees) {
+        anim.setState(State.FALL);
+        savedTransform.set(batch.getTransformMatrix());
+        float centerX = position.x + width / 2f, centerY = position.y + height / 2f;
+        spinTransform.set(savedTransform).translate(centerX, centerY, 0f)
+            .rotate(0f, 0f, 1f, degrees).translate(-centerX, -centerY, 0f);
+        batch.setTransformMatrix(spinTransform);
+        draw(batch);
+        batch.setTransformMatrix(savedTransform);
+    }
 
     @Override
     public void draw(SpriteBatch batch) {
@@ -342,7 +369,9 @@ public class Player extends Entity implements Attackable {
         if (amount <= 0 || isDead() || invulnTimer > 0 || isDashing()) {
             return;
         }
-        health = Math.max(0, health - amount);
+        int lost = Math.min(health, amount);
+        health -= lost;
+        addRage(lost * 2f);
         invulnTimer = INVULN_TIME;
     }
 
@@ -388,6 +417,14 @@ public class Player extends Entity implements Attackable {
     public int getMaxHealth() { return MAX_HEALTH; }
     public float getRage() { return rage; }
     public float getMaxRage() { return MAX_RAGE; }
+    public boolean isFacingRight() { return facingRight; }
+    public boolean isRageReady() { return !isDead() && rage >= MAX_RAGE; }
+
+    public boolean spendFullRage() {
+        if (!isRageReady()) return false;
+        rage = 0f;
+        return true;
+    }
 
     public void addRage(float amount) {
         rage = Math.max(0f, Math.min(MAX_RAGE, rage + amount));

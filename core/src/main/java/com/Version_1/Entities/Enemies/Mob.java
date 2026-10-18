@@ -54,6 +54,7 @@ public class Mob extends Enemy {
     protected boolean updateReaction(float delta) {
         if (isRemoved()) return true;
         time += delta;
+        if (isRageCarried()) return true;
         drainTimer = Math.max(0f, drainTimer - delta);
         detachCooldown = Math.max(0f, detachCooldown - delta);
         hitTimer = Math.max(0f, hitTimer - delta);
@@ -100,7 +101,15 @@ public class Mob extends Enemy {
 
     public boolean isAttached() { return attached; }
     public boolean canLatch() {
-        return !attached && !isDead() && !isEmerging() && !isStaggered() && detachCooldown <= 0f;
+        return !attached && !isRageCarried() && !isDead() && !isEmerging() && !isStaggered() && detachCooldown <= 0f;
+    }
+
+    @Override
+    public boolean holdByRage(com.Version_1.Entities.Projectile wave) {
+        if (!super.holdByRage(wave)) return false;
+        attached = false;
+        recoilVelocity = 0f;
+        return true;
     }
 
     public void attach() {

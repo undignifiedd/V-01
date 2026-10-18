@@ -5,6 +5,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.Version_1.Entities.Attackable;
 import com.Version_1.Entities.Entity;
 import com.Version_1.Entities.Player;
+import com.Version_1.Entities.Projectile;
 import com.Version_1.World.World;
 
 /**
@@ -20,6 +21,7 @@ public abstract class Enemy extends Entity implements Attackable {
     protected final int maxHealth;
     protected int health;
     protected boolean facingRight = false;
+    private Projectile rageCarrier;
 
     public Enemy(float x, float y, float width, float height,
                  int maxHealth, Player player, World world) {
@@ -81,6 +83,18 @@ public abstract class Enemy extends Entity implements Attackable {
 
     public int getHealth() { return health; }
     public int getMaxHealth() { return maxHealth; }
+    public boolean isRageCarried() { return rageCarrier != null; }
+    public boolean holdByRage(Projectile wave) {
+        if (rageCarrier != null && rageCarrier != wave) return false;
+        rageCarrier = wave;
+        return true;
+    }
+    public void releaseFromRage(Projectile wave) {
+        if (rageCarrier != wave) return;
+        rageCarrier = null;
+        onRageReleased();
+    }
+    protected void onRageReleased() { }
 
     private static float centerX(Rectangle r) {
         return r.x + r.width / 2f;
