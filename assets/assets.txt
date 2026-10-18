@@ -93,6 +93,7 @@ big_boss/Walk/Bringer-of-Death_Walk_6.png
 big_boss/Walk/Bringer-of-Death_Walk_7.png
 big_boss/Walk/Bringer-of-Death_Walk_8.png
 big_boss/attack.png
+big_boss/boss_combined.png
 big_boss/idle.png
 big_boss/walk.png
 bossfight_background/eye_blink_512.gif
@@ -107,11 +108,31 @@ netanyahu/bro.jpg
 notebook.jpg
 sfx/1. Behind the Curtains.wav
 sfx/2. Moonless Night.wav
+<<<<<<< HEAD
+=======
+sfx/combat/README.md
+sfx/combat/heavy_hit.ogg
+sfx/combat/kenney_license.txt
+sfx/combat/punch_hit_01.ogg
+sfx/combat/punch_hit_02.ogg
+sfx/combat/rage_explosion.ogg
+sfx/combat/rage_launch.wav
+sfx/combat/shield_impact.ogg
+sprites/bob_frown_spritesheet.png
+>>>>>>> d3ddce509778428916662503a8d3b6b9b439bc60
 sprites/combined_spritesheet.png
 sprites/girl_jump_spritesheet_4x48x80.png
 sprites/girl_stop_block_spritesheet_3x48x64.png
 sprites/pixil-frame-0 (1).png
 sprites/player_attack.png
+<<<<<<< HEAD
 ui elements/Skin06-Question_Exit-Game.png
 ui elements/Skin06-Start-Screen-Menu.png
 ui elements/blood_splatter.png
+=======
+sprites/player_smile_spritesheet.png
+ui elements/Skin06-Question_Exit-Game.png
+ui elements/Skin06-Start-Screen-Menu.png
+ui elements/blood_splatter.png
+ui elements/menu_textonly.png
+>>>>>>> d3ddce509778428916662503a8d3b6b9b439bc60
